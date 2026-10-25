@@ -8,6 +8,9 @@ import java.util.List;
 
 public interface ShowtimeRepository extends JpaRepository<Showtime, Integer> {
 
+    // MỚI: suất chiếu chưa bắt đầu của một phim (dùng cho bước 2)
+    List<Showtime> findByMovie_IdAndStartTimeAfterOrderByStartTimeAsc(Integer movieId, LocalDateTime now);
+
     List<Showtime> findByMovie_IdAndStartTimeBetweenOrderByStartTimeAsc(
             Integer movieId,
             LocalDateTime start,
