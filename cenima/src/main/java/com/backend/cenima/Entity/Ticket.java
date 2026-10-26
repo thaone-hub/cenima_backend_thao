@@ -18,7 +18,7 @@ public class Ticket {
     @Column(name = "TicketID")
     private Integer id;
 
-    @Column(name = "TicketCode", nullable = false, unique = true, length = 30)
+    @Column(name = "TicketCode", nullable = false, unique = true, length = 32)
     private String ticketCode;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -15,6 +15,18 @@ public class KeyManager {
     private final ECKey ecKey;
     private final OctetKeyPair ed25519Key;
 
+    /** Runtime constructor. The original no-arg constructor remains ephemeral for Thao's unit tests. */
+    public KeyManager(java.nio.file.Path directory) throws JOSEException {
+        var keys=PersistentTraditionalKeys.load(directory);
+        if (!(keys.getKeyByKeyId("rsa-key-1") instanceof RSAKey rsa)
+                || !(keys.getKeyByKeyId("ec-key-1") instanceof ECKey ec)
+                || !(keys.getKeyByKeyId("ed25519-key-1") instanceof OctetKeyPair ed)
+                || !rsa.isPrivate() || rsa.size()<2048 || !ec.isPrivate() || !Curve.P_256.equals(ec.getCurve())
+                || !ed.isPrivate() || !Curve.Ed25519.equals(ed.getCurve()) || keys.getKeys().size()!=3)
+            throw new JOSEException("Persistent key set is incomplete or invalid");
+        rsaKey=rsa; ecKey=ec; ed25519Key=ed;
+    }
+
     public KeyManager() throws JOSEException {
 
         rsaKey = new RSAKeyGenerator(2048)

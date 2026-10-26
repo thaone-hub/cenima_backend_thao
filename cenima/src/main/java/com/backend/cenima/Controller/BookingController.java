@@ -4,6 +4,7 @@ import com.backend.cenima.DTO.BookingResponse;
 import com.backend.cenima.DTO.CreateBookingRequest;
 import com.backend.cenima.DTO.SeatStatusResponse;
 import com.backend.cenima.Service.BookingService;
+import com.backend.cenima.Security.contract.TicketActorProvider;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final TicketActorProvider actors;
 
     // GET /api/showtimes/{id}/seats
     @GetMapping("/showtimes/{showtimeId}/seats")
@@ -25,12 +27,10 @@ public class BookingController {
     }
 
     // POST /api/bookings
-    // TẠM THỜI: userId lấy từ header X-User-Id để test bằng Postman.
-    // Khi nối với đăng nhập, bỏ header này và lấy userId từ JWT/Authentication.
+    // Demo retains X-User-Id. Integrated obtains the authenticated database actor.
     @PostMapping("/bookings")
     @ResponseStatus(HttpStatus.CREATED)
-    public BookingResponse create(@RequestHeader("X-User-Id") Integer userId,
-                                  @Valid @RequestBody CreateBookingRequest req) {
-        return bookingService.createBooking(userId, req);
+    public BookingResponse create(@Valid @RequestBody CreateBookingRequest req) {
+        return bookingService.createBooking(actors.currentActor().userId(), req);
     }
 }

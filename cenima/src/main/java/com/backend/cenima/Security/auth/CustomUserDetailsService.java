@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("integrated")
 public class CustomUserDetailsService
         implements UserDetailsService {
 

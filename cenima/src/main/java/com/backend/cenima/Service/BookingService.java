@@ -17,11 +17,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class BookingService {
+    private final Clock clock;
 
     private final ShowtimeRepository showtimeRepo;
     private final SeatRepository seatRepo;
@@ -50,7 +52,7 @@ public class BookingService {
     public BookingResponse createBooking(Integer userId, CreateBookingRequest req) {
         Showtime showtime = showtimeRepo.findById(req.showtimeId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Suất chiếu không tồn tại"));
-        if (!showtime.getStartTime().isAfter(LocalDateTime.now())) {
+        if (!showtime.getStartTime().isAfter(LocalDateTime.now(clock))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Suất chiếu đã bắt đầu");
         }
 

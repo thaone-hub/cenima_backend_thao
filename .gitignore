@@ -1,0 +1,13 @@
+**/target/
+**/.local/
+**/.env
+**/.env.*
+!**/.env.example
+**/*.key
+**/*.pk8
+**/*.jwk
+**/*.p12
+**/*.pem
+**/*.log
+**/.idea/
+**/.vscode/
