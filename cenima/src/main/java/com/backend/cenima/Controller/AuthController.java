@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("integrated")
 public class AuthController {
 
     private final AuthService authService;

@@ -13,12 +13,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.Comparator;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class MovieService {
+    private final Clock clock;
 
     private final MovieRepository movieRepo;
     private final ShowtimeRepository showtimeRepo;
@@ -38,7 +40,7 @@ public class MovieService {
         if (!movieRepo.existsById(movieId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Phim không tồn tại");
         }
-        return showtimeRepo.findByMovie_IdAndStartTimeAfterOrderByStartTimeAsc(movieId, LocalDateTime.now())
+        return showtimeRepo.findByMovie_IdAndStartTimeAfterOrderByStartTimeAsc(movieId, LocalDateTime.now(clock))
                 .stream()
                 .map(this::toShowtimeResponse)
                 .toList();

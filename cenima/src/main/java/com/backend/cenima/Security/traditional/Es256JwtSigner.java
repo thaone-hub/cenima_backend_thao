@@ -28,12 +28,17 @@ public class Es256JwtSigner
     public String sign(
             JWTClaimsSet claims)
             throws Exception {
+        return sign(claims, JOSEObjectType.JWT);
+    }
+
+    /** Ticket adapter chooses eticket+jwt; authentication keeps the original JWT type. */
+    public String sign(JWTClaimsSet claims, JOSEObjectType type) throws Exception {
 
         JWSHeader header =
                 new JWSHeader.Builder(
                         JWSAlgorithm.ES256
                 )
-                .type(JOSEObjectType.JWT)
+                .type(type)
                 .keyID(
                         keyManager
                                 .getEcPrivateKey()
@@ -72,6 +77,12 @@ public class Es256JwtSigner
             throw new SecurityException(
                     "Expected ES256"
             );
+        }
+
+        if (!keyManager.getEcPublicKey().getKeyID().equals(jwt.getHeader().getKeyID())
+                || jwt.getHeader().getJWKURL() != null || jwt.getHeader().getJWK() != null
+                || jwt.getHeader().getX509CertURL() != null || jwt.getHeader().getCriticalParams() != null) {
+            throw new SecurityException("Untrusted JWT header/key ID");
         }
 
         boolean valid =

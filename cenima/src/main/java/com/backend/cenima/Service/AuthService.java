@@ -30,6 +30,7 @@ import java.util.Date;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@org.springframework.context.annotation.Profile("integrated")
 public class AuthService {
 
     private static final String ISSUER =
@@ -344,6 +345,8 @@ public class AuthService {
 
         try {
 
+            if (!com.nimbusds.jose.JOSEObjectType.JWT.equals(com.nimbusds.jwt.SignedJWT.parse(token).getHeader().getType()))
+                throw new SecurityException("Expected authentication JWT type");
             JWTClaimsSet claims =
                     jwtSigner.verify(token);
 

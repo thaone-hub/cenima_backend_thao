@@ -24,6 +24,7 @@ public class RefreshToken {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
+    // Keep Thao's 1000-char auth-token contract; SQL migration expands the original 500.
     @Column(name = "Token", nullable = false, unique = true, length = 1000)
     private String token;
 
