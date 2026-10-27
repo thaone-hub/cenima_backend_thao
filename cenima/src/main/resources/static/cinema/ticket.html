@@ -1,0 +1,122 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vé điện tử · CineVerse</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        CINE<em>VERSE</em>
+      </a>
+
+      <nav class="topnav">
+        <a href="./index.html">Trang chủ</a>
+        <a href="./login.html" data-auth-link>Đăng nhập</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell page">
+    <div class="breadcrumb">
+      <a href="./index.html">Phim</a>
+      / Vé điện tử
+    </div>
+
+    <div class="eyebrow">Digital ticket</div>
+
+    <h1>Vé điện tử của bạn</h1>
+
+    <div id="message" class="notice" hidden></div>
+
+    <div class="flow-layout">
+
+      <section class="panel">
+
+        <h2 id="ticket-heading">
+          Đang tải vé...
+        </h2>
+
+        <p class="muted" id="ticket-info"></p>
+
+        <div class="divider"></div>
+
+        <div class="form">
+
+          <label>
+            Thuật toán ký JWT
+
+            <select
+              id="algorithm"
+              aria-label="Chọn thuật toán"
+            ></select>
+          </label>
+
+          <button
+            id="issue-token"
+            class="btn primary"
+            disabled
+          >
+            Phát hành JWT + QR
+          </button>
+        </div>
+
+        <p class="muted">
+          Nếu đã bật cấu hình ML-DSA,
+          thuật toán ML-DSA-44 sẽ xuất hiện
+          khi provider sẵn sàng.
+        </p>
+
+        <a class="text-link" href="/demo/check-in.html">
+          Đi tới trang check-in nhân viên
+        </a>
+
+      </section>
+
+      <aside id="issued" class="panel" hidden>
+
+        <h2>QR vé của bạn</h2>
+
+        <div class="qr-holder">
+          <img
+            id="qr-image"
+            alt="Mã QR vé điện tử"
+          >
+        </div>
+
+        <p id="qr-mode" class="muted"></p>
+
+        <p id="expires" class="muted"></p>
+
+        <div class="form">
+
+          <label>
+            JWT đã ký
+
+            <textarea
+              id="token"
+              readonly
+              aria-label="JWT vé điện tử"
+            ></textarea>
+          </label>
+
+          <button
+            class="btn ghost full"
+            id="copy-token"
+          >
+            Sao chép JWT
+          </button>
+
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script type="module" src="./js/ticket.js"></script>
+</body>
+</html>

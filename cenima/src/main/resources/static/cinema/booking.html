@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xác nhận đặt vé · CineVerse</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        CINE<em>VERSE</em>
+      </a>
+
+      <nav class="topnav">
+        <a href="./index.html">Trang chủ</a>
+        <a href="./login.html" data-auth-link>Đăng nhập</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell page">
+
+    <div class="breadcrumb">
+      <a href="./index.html">Phim</a>
+      / Đặt vé
+    </div>
+
+    <div class="eyebrow">Step 03 / 03</div>
+
+    <h1>Xác nhận đặt vé</h1>
+
+    <div id="message" class="notice" hidden></div>
+
+    <section class="panel" id="booking-form">
+      <h2>Thông tin đơn đặt</h2>
+
+      <div class="line-item">
+        <span class="muted">Phòng và suất chiếu</span>
+        <strong id="booking-show">—</strong>
+      </div>
+
+      <div class="line-item">
+        <span class="muted">Ghế</span>
+        <strong id="booking-seats">—</strong>
+      </div>
+
+      <div class="line-item">
+        <span class="muted">Tạm tính</span>
+
+        <strong id="booking-total" class="total">
+          —
+        </strong>
+      </div>
+
+      <p class="muted">
+        Bản demo chưa tích hợp thanh toán thật.
+        Backend tự tạo Booking trạng thái PAID
+        ngay khi đặt thành công.
+      </p>
+
+      <button id="confirm" class="btn primary">
+        Xác nhận đặt vé
+      </button>
+    </section>
+
+    <section id="result" class="panel" hidden>
+
+      <h2 id="result-title">
+        Đặt vé thành công!
+      </h2>
+
+      <p id="result-details"></p>
+
+      <div class="stack" id="ticket-links"></div>
+
+      <p class="muted">
+        Mỗi ghế tạo một vé riêng với Ticket ID
+        khác nhau.
+      </p>
+
+    </section>
+
+  </main>
+
+  <script type="module" src="./js/booking.js"></script>
+</body>
+</html>

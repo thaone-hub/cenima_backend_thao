@@ -27,12 +27,18 @@
     </properties>
 
     <dependencies>
-        <!-- Ngoc: QR generation and image round-trip tests. Keep Nimbus/Tink for Thao. -->
+
+        <!-- Ngoc: QR generation and image round-trip tests -->
         <dependency>
-            <groupId>com.google.zxing</groupId><artifactId>core</artifactId><version>3.5.3</version>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
         </dependency>
+
         <dependency>
-            <groupId>com.google.zxing</groupId><artifactId>javase</artifactId><version>3.5.3</version>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.3</version>
         </dependency>
 
         <!-- REST API -->
@@ -103,6 +109,13 @@
             <version>1.24.0</version>
         </dependency>
 
+        <!-- Huong: Post-Quantum ML-DSA -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.83</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -137,7 +150,6 @@
                 <artifactId>maven-compiler-plugin</artifactId>
 
                 <configuration>
-
                     <release>21</release>
 
                     <annotationProcessorPaths>
