@@ -1,0 +1,6 @@
+{
+  "name": "CineGuard - Post-Quantum Movie Ticket Security & Benchmark Lab",
+  "description": "Nền tảng kiểm thử bảo mật & benchmark chuyên sâu chữ ký số vé điện tử (RS256, ES256, EdDSA, ML-DSA-44) theo phân công Người 5 - Trang",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
