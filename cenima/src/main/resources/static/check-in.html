@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Check-in — Star Cinema</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/assets/space.css" />
+    <script src="/assets/space.js" defer></script>
+    <script src="/assets/checkin.js" defer></script>
+  </head>
+  <body data-page="checkin">
+    <header id="site-header"></header>
+    <main class="container section">
+      <p class="eyebrow">STAR CINEMA / CHECK-IN</p>
+      <h1 class="page-title">
+        Chào đón những <span class="serif">khán giả.</span>
+      </h1>
+      <p class="muted">
+        Xác minh vé trước khi check-in. Dành cho quản trị viên và nhân viên.
+      </p>
+      <div id="checkin-guard" class="empty-state">
+        Đang kiểm tra quyền truy cập…
+      </div>
+      <div id="checkin-content" class="checkin-grid" hidden>
+        <section class="ticket-card">
+          <p class="eyebrow">01 / QUÉT MÃ</p>
+          <h2>Đọc mã QR</h2>
+          <div class="camera-box">
+            <video
+              id="camera"
+              muted
+              playsinline
+              aria-label="Camera quét QR"
+            ></video>
+            <p id="camera-message">Bật camera hoặc chọn ảnh QR từ thiết bị.</p>
+          </div>
+          <div class="hero-actions">
+            <button class="button outline" id="start-camera">Bật camera</button
+            ><button class="button subtle" id="stop-camera">Tắt camera</button>
+          </div>
+          <label class="file-label"
+            >Hoặc chọn ảnh QR<input type="file" id="qr-file" accept="image/*"
+          /></label>
+          <p class="small muted">
+            Camera và ảnh QR chỉ xác minh vé. Check-in cần bạn bấm xác nhận
+            riêng.
+          </p>
+        </section>
+        <section class="ticket-card">
+          <p class="eyebrow">02 / XÁC MINH</p>
+          <h2>Kiểm tra vé</h2>
+          <form id="verify-form">
+            <label
+              >Nội dung mã vé<textarea
+                id="ticket-value"
+                rows="5"
+                required
+                maxlength="32768"
+                placeholder="Dán nội dung mã vé hoặc quét QR"
+                spellcheck="false"
+              ></textarea>
+            </label>
+            <div class="hero-actions">
+              <button class="button gold" type="submit">Xác minh vé ↗</button
+              ><button
+                class="button outline"
+                id="confirm-checkin"
+                type="button"
+                disabled
+              >
+                Check-in
+              </button>
+            </div>
+          </form>
+          <div id="verified-ticket" hidden></div>
+          <p id="checkin-message" class="form-message" role="status" hidden></p>
+        </section>
+      </div>
+    </main>
+    <footer id="site-footer"></footer>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>

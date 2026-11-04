@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs><linearGradient id="star" x1="20" y1="15" x2="102" y2="105" gradientUnits="userSpaceOnUse"><stop stop-color="#eadcff"/><stop offset=".5" stop-color="#b98aff"/><stop offset="1" stop-color="#8053da"/></linearGradient></defs>
+  <path d="M60 5C63 43 67 49 115 60C70 63 64 70 60 115C56 73 50 65 5 60C49 55 56 47 60 5Z" fill="url(#star)"/>
+  <path d="M26 27C44 39 51 46 60 49C72 45 84 34 96 24C84 42 76 52 73 60C77 73 88 85 97 98C79 85 69 75 60 72C48 77 36 89 24 98C36 79 45 70 48 60C44 48 35 38 26 27Z" stroke="#d5b7ff" stroke-width="1.1"/>
+  <ellipse cx="60" cy="60" rx="58" ry="13" transform="rotate(-42 60 60)" stroke="#c69cff" stroke-width="1.8"/>
+  <path d="m18 11 2.2 6.8L27 20l-6.8 2.2L18 29l-2.2-6.8L9 20l6.8-2.2L18 11Zm84 77 1.6 6.4L110 96l-6.4 1.6L102 104l-1.6-6.4L94 96l6.4-1.6L102 88Z" fill="#e5d3ff"/>
+  <circle cx="100" cy="28" r="2" fill="#b78aec"/>
+</svg>

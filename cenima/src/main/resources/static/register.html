@@ -1,0 +1,100 @@
+﻿<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#09060f" />
+    <title>Đăng ký — Star Cinema</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/assets/space.css" />
+    <script src="/assets/space.js" defer></script>
+    <script src="/assets/auth.js" defer></script>
+  </head>
+  <body data-page="register" class="auth-page">
+    <header id="site-header"></header>
+    <main class="auth-layout container">
+      <section class="auth-panel auth-register" aria-labelledby="auth-title">
+        <div class="auth-panel-heading">
+          <a class="auth-close" href="/" aria-label="Đóng đăng ký">×</a>
+          <h1 id="auth-title">Đăng ký</h1>
+          <p>Tạo tài khoản để đặt vé và theo dõi quyền lợi thành viên.</p>
+        </div>
+        <div class="auth-panel-body">
+          <form id="auth-form">
+            <div class="auth-fields-row">
+              <label
+                >Họ<input
+                  name="lastName"
+                  autocomplete="family-name"
+                  placeholder="Họ"
+                  maxlength="50"
+                  required /></label
+              ><label
+                >Tên<input
+                  name="firstName"
+                  autocomplete="given-name"
+                  placeholder="Tên"
+                  maxlength="50"
+                  required
+              /></label>
+            </div>
+            <label
+              >Email<input
+                type="email"
+                name="email"
+                autocomplete="username"
+                placeholder="Email"
+                maxlength="100"
+                required /></label
+            ><label
+              >Số điện thoại<input
+                type="tel"
+                name="phoneNumber"
+                autocomplete="tel"
+                placeholder="Số điện thoại"
+                maxlength="15"
+                pattern="[0-9+() .\-]{0,15}"
+            /></label>
+            <div class="auth-fields-row">
+              <label
+                >Mật khẩu<span class="password-field"
+                  ><input
+                    type="password"
+                    name="password"
+                    autocomplete="new-password"
+                    placeholder="Mật khẩu"
+                    minlength="8"
+                    maxlength="72"
+                    required
+                  /><button
+                    type="button"
+                    class="password-toggle"
+                    aria-label="Hiện mật khẩu"
+                  >
+                    Hiện
+                  </button></span
+                ></label
+              ><label
+                >Xác nhận mật khẩu<input
+                  type="password"
+                  name="confirmPassword"
+                  autocomplete="new-password"
+                  placeholder="Xác nhận mật khẩu"
+                  minlength="8"
+                  maxlength="72"
+                  required
+              /></label>
+            </div>
+            <p id="form-message" class="form-message" role="status" hidden></p>
+            <button type="submit" class="button gold full">Đăng ký</button>
+          </form>
+          <p class="auth-switch">
+            Bạn đã có tài khoản? <a href="/login.html">Đăng nhập</a>
+          </p>
+        </div>
+      </section>
+    </main>
+    <footer id="site-footer"></footer>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>

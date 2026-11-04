@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0a0712" />
+    <meta
+      name="description"
+      content="Khám phá phim, chọn suất chiếu và đặt vé tại Star Cinema."
+    />
+    <title>Star Cinema — Phim và lịch chiếu</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/assets/space.css" />
+    <script src="/assets/space.js" defer></script>
+    <script src="/assets/home.js" defer></script>
+    <script src="/assets/carousel.js" defer></script>
+  </head>
+  <body data-page="home">
+    <a class="skip" href="#main">Đến nội dung chính</a>
+    <header id="site-header"></header>
+    <main id="main">
+      <section
+        class="film-carousel"
+        role="region"
+        aria-roledescription="băng chuyền"
+        aria-label="Phim nổi bật"
+        tabindex="0"
+      >
+        <div class="film-slides">
+          <div class="film-slide" data-featured-id="ncc-11314" role="group" aria-roledescription="trang chiếu" aria-label="CHỊ CHỊ EM EM 3-T18">
+            <picture class="film-picture">
+              <img class="film-backdrop" src="/assets/hero-chi-chi-em-em-3.jpg" alt="CHỊ CHỊ EM EM 3-T18" fetchpriority="high" draggable="false">
+            </picture>
+            <button class="film-open" data-featured-id="ncc-11314" aria-label="Xem chi tiết CHỊ CHỊ EM EM 3-T18"></button>
+          </div>
+          <div class="film-slide" data-featured-id="ncc-11248" role="group" aria-roledescription="trang chiếu" aria-label="CLAYFACE-T18" hidden>
+            <picture class="film-picture">
+              <img class="film-backdrop" src="/assets/hero-clayface.jpg" alt="CLAYFACE-T18" loading="lazy" draggable="false">
+            </picture>
+            <button class="film-open" data-featured-id="ncc-11248" aria-label="Xem chi tiết CLAYFACE-T18"></button>
+          </div>
+          <div class="film-slide" data-featured-id="ncc-11195" role="group" aria-roledescription="trang chiếu" aria-label="PHIM STREET FIGHTER-T16" hidden>
+            <picture class="film-picture">
+              <img class="film-backdrop" src="/assets/hero-street-fighter.jpg" alt="PHIM STREET FIGHTER-T16" loading="lazy" draggable="false">
+            </picture>
+            <button class="film-open" data-featured-id="ncc-11195" aria-label="Xem chi tiết PHIM STREET FIGHTER-T16"></button>
+          </div>
+          <div class="film-slide" data-featured-id="ncc-11366" role="group" aria-roledescription="trang chiếu" aria-label="NGƯỜI MẸ KHÁC-T18" hidden>
+            <picture class="film-picture">
+              <img class="film-backdrop" src="/assets/hero-nguoi-me-khac.jpg" alt="NGƯỜI MẸ KHÁC-T18" loading="lazy" draggable="false">
+            </picture>
+            <button class="film-open" data-featured-id="ncc-11366" aria-label="Xem chi tiết NGƯỜI MẸ KHÁC-T18"></button>
+          </div>
+          <div class="film-slide" data-featured-id="ncc-11347" role="group" aria-roledescription="trang chiếu" aria-label="TRẠI BUÔN NGƯỜI-T18" hidden>
+            <picture class="film-picture">
+              <img class="film-backdrop" src="/assets/hero-trai-buon-nguoi.jpg" alt="TRẠI BUÔN NGƯỜI-T18" loading="lazy" draggable="false">
+            </picture>
+            <button class="film-open" data-featured-id="ncc-11347" aria-label="Xem chi tiết TRẠI BUÔN NGƯỜI-T18"></button>
+          </div>
+        </div>
+        <button class="carousel-side carousel-previous" data-carousel="previous" aria-label="Phim trước">&#10094;</button><button class="carousel-side carousel-next" data-carousel="next" aria-label="Phim tiếp theo">&#10095;</button><p class="sr-only" id="carousel-status" aria-live="polite"></p>
+      </section>
+      <section
+        class="section container"
+        id="movies"
+        aria-labelledby="movies-title"
+      >
+        <h1 id="movies-title">Tất cả phim</h1>
+        <div class="catalog-toolbar">
+          <div class="tabs" role="tablist" aria-label="Trạng thái phim">
+            <button
+              role="tab"
+              aria-selected="true"
+              aria-controls="movie-grid"
+              id="tab-now"
+              data-status="1"
+            >
+              Đang chiếu</button
+            ><button
+              role="tab"
+              aria-selected="false"
+              aria-controls="movie-grid"
+              id="tab-soon"
+              data-status="2"
+            >
+              Sắp chiếu
+            </button>
+          </div>
+          <label class="search"
+            ><span aria-hidden="true">⌕</span
+            ><input
+              id="movie-search"
+              type="search"
+              placeholder="Tìm tên phim…"
+              aria-label="Tìm tên phim"
+          /></label>
+        </div>
+        <div
+          class="movie-grid"
+          id="movie-grid"
+          role="tabpanel"
+          aria-labelledby="tab-now"
+          aria-live="polite"
+        >
+          <p class="empty-state">Đang tải danh sách phim…</p>
+        </div>
+      </section>
+      <section class="section container" id="my-tickets" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">HÀNH TRÌNH CỦA BẠN</p>
+            <h2>Vé <span class="serif">của tôi.</span></h2>
+          </div>
+          <button class="button outline" id="reload-tickets">
+            Tải lại vé ↻
+          </button>
+        </div>
+        <div class="tickets-grid" id="tickets-grid"></div>
+      </section>
+    </main>
+    <footer id="site-footer"></footer>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <dialog id="movie-dialog" class="modal wide">
+      <button class="close-modal" aria-label="Đóng">×</button>
+      <div id="movie-detail"></div>
+    </dialog>
+    <dialog id="qr-dialog" class="modal">
+      <button class="close-modal" aria-label="Đóng">×</button>
+      <p class="eyebrow">VÉ ĐIỆN TỬ</p>
+      <h2>Mã QR của bạn</h2>
+      <div id="qr-content"></div>
+    </dialog>
+  </body>
+</html>

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#090a0f" />
+    <title>Quản trị — Star Cinema</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/assets/space.css" />
+    <script src="/assets/space.js" defer></script>
+    <script src="/assets/admin.js" defer></script>
+  </head>
+  <body data-page="admin">
+    <header id="site-header"></header>
+    <main class="container section">
+      <div id="admin-guard" class="empty-state">
+        Đang kiểm tra quyền truy cập…
+      </div>
+      <div id="admin-content" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">STAR CINEMA / ADMIN</p>
+            <h1 class="page-title">
+              Trạm <span class="serif">điều khiển.</span>
+            </h1>
+            <p class="muted">
+              Quản lý phim và tài khoản trong không gian của bạn.
+            </p>
+          </div>
+          <a class="button outline" href="/check-in.html">Kiểm tra vé ↗</a>
+        </div>
+        <div id="stats" class="stats-grid"></div>
+        <div class="catalog-toolbar">
+          <div class="tabs" role="tablist" aria-label="Quản trị">
+            <button
+              role="tab"
+              aria-selected="true"
+              aria-controls="admin-users"
+              data-admin-tab="users"
+            >
+              Tài khoản</button
+            ><button
+              role="tab"
+              aria-selected="false"
+              aria-controls="admin-movies"
+              data-admin-tab="movies"
+            >
+              Phim
+            </button>
+          </div>
+          <button class="button gold" id="add-movie" hidden>+ Thêm phim</button>
+        </div>
+        <section id="admin-users" role="tabpanel">
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">
+                Danh sách tài khoản
+              </caption>
+              <thead>
+                <tr>
+                  <th>Thành viên</th>
+                  <th>Email</th>
+                  <th>Vai trò</th>
+                  <th>Trạng thái</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="users-body"></tbody>
+            </table>
+          </div>
+        </section>
+        <section id="admin-movies" role="tabpanel" hidden>
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">
+                Danh sách phim
+              </caption>
+              <thead>
+                <tr>
+                  <th>Tên phim</th>
+                  <th>Thời lượng</th>
+                  <th>Khởi chiếu</th>
+                  <th>Trạng thái</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="movies-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer id="site-footer"></footer>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <dialog id="edit-dialog" class="modal">
+      <button class="close-modal" aria-label="Đóng">×</button>
+      <p class="eyebrow">QUẢN LÝ ĐIỆN ẢNH</p>
+      <h2 id="edit-title">Thêm phim</h2>
+      <form id="movie-form">
+        <input type="hidden" name="id" /><label
+          >Tên phim<input name="title" required maxlength="200"
+        /></label>
+        <div class="form-row">
+          <label
+            >Thời lượng (phút)<input
+              name="duration"
+              type="number"
+              required
+              min="1"
+              max="600" /></label
+          ><label
+            >Ngày khởi chiếu<input name="releaseDate" type="date" required
+          /></label>
+        </div>
+        <label>Đạo diễn<input name="director" maxlength="100" /></label
+        ><label
+          >Mô tả<textarea
+            name="description"
+            rows="3"
+            maxlength="10000"
+          ></textarea></label
+        ><label
+          >Ảnh phim (đường dẫn /assets/)<input
+            name="posterUrl"
+            maxlength="500"
+            placeholder="/assets/poster-1.jpg" /></label
+        ><label
+          >Trạng thái<select name="status">
+            <option value="1">Đang chiếu</option>
+            <option value="2">Sắp chiếu</option>
+            <option value="0">Ngừng chiếu</option>
+          </select></label
+        >
+        <p id="edit-message" class="form-message" role="status" hidden></p>
+        <button class="button gold full" type="submit">Lưu phim ↗</button>
+      </form>
+    </dialog>
+  </body>
+</html>

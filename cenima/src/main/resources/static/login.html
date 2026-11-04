@@ -1,0 +1,66 @@
+﻿<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#09060f" />
+    <title>Đăng nhập — Star Cinema</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/assets/space.css" />
+    <script src="/assets/space.js" defer></script>
+    <script src="/assets/auth.js" defer></script>
+  </head>
+  <body data-page="login" class="auth-page">
+    <header id="site-header"></header>
+    <main class="auth-layout container">
+      <section class="auth-panel auth-login" aria-labelledby="auth-title">
+        <div class="auth-panel-heading">
+          <a class="auth-close" href="/" aria-label="Đóng đăng nhập">×</a>
+          <h1 id="auth-title">Đăng nhập</h1>
+          <p>Đăng nhập để quản lý vé và thông tin thành viên của bạn.</p>
+        </div>
+        <div class="auth-panel-body">
+          <form id="auth-form">
+            <label
+              >Email<input
+                type="email"
+                name="email"
+                autocomplete="username"
+                placeholder="Email"
+                required
+                maxlength="100" /></label
+            ><label
+              >Mật khẩu<span class="password-field"
+                ><input
+                  type="password"
+                  name="password"
+                  autocomplete="current-password"
+                  placeholder="Mật khẩu"
+                  required
+                /><button
+                  type="button"
+                  class="password-toggle"
+                  aria-label="Hiện mật khẩu"
+                >
+                  Hiện
+                </button></span
+              ></label
+            >
+            <div class="auth-forgot-row">
+              <button type="button" class="auth-forgot" id="forgot-password">
+                Quên mật khẩu?
+              </button>
+            </div>
+            <p id="form-message" class="form-message" role="status" hidden></p>
+            <button type="submit" class="button gold full">Đăng nhập</button>
+          </form>
+          <p class="auth-switch">
+            Bạn chưa có tài khoản? <a href="/register.html">Đăng ký</a>
+          </p>
+        </div>
+      </section>
+    </main>
+    <footer id="site-footer"></footer>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>
