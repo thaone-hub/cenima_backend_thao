@@ -70,6 +70,41 @@ class IntegratedSqlServerTest extends SqlServerTestSupport {
         adminAccess=login(emails.get("admin")).get("accessToken").asString();
         otherAccess=login(emails.get("other")).get("accessToken").asString();
     }
+    @Test void portalEnforcesAdminAndTicketOwnership() {
+        assertThat(request("GET","/api/movies",null,null).status()).isEqualTo(200);
+        assertThat(request("GET","/api/admin/users",null,null).status()).isEqualTo(401);
+        assertThat(request("GET","/api/admin/users",ownerAccess,null).status()).isEqualTo(403);
+        assertThat(request("GET","/api/admin/movies",staffAccess,null).status()).isEqualTo(403);
+        assertThat(request("GET","/api/admin/stats",adminAccess,null).status()).isEqualTo(200);
+        var own=request("GET","/api/account/tickets",ownerAccess,null);
+        assertThat(own.status()).isEqualTo(200);
+        assertThat(own.body().toString()).contains("\"ticketId\":"+ticketId);
+        assertThat(request("GET","/api/account/tickets",otherAccess,null).body().toString()).doesNotContain("\"ticketId\":"+ticketId);
+        assertThat(request("PATCH","/api/admin/users/"+otherId+"/active",ownerAccess,Map.of("active",false)).status()).isEqualTo(403);
+        assertThat(request("PATCH","/api/admin/users/"+otherId+"/active",adminAccess,Map.of("active",false)).status()).isEqualTo(200);
+        assertThat(request("GET","/api/account/me",otherAccess,null).status()).isEqualTo(401);
+        var adminId=request("GET","/api/account/me",adminAccess,null).body().get("id").asInt();
+        assertThat(request("PATCH","/api/admin/users/"+adminId+"/active",adminAccess,Map.of("active",false)).status()).isEqualTo(409);
+    }
+    @Test void registrationCreatesOnlyCustomerAndValidatesCredentials() {
+        String email="portal-"+UUID.randomUUID()+"@integration.test";
+        var input=Map.of("fullName","Portal Test","email",email.toUpperCase(Locale.ROOT),"password","PortalTest123!","phoneNumber","0901234567");
+        var created=request("POST","/api/auth/register",null,input);
+        assertThat(created.status()).isEqualTo(201);
+        int id=created.body().get("id").asInt(); userIds.add(id);
+        assertThat(created.body().get("role").asString()).isEqualTo("USER");
+        assertThat(created.body().toString()).doesNotContain("passwordHash");
+        new TransactionTemplate(transactions).executeWithoutResult(tx->{
+            var user=users.findById(id).orElseThrow();
+            assertThat(user.getRole().getRoleName()).isEqualTo("CUSTOMER");
+            assertThat(passwords.matches("PortalTest123!",user.getPasswordHash())).isTrue();
+        });
+        assertThat(request("POST","/api/auth/register",null,input).status()).isEqualTo(409);
+        assertThat(request("POST","/api/auth/register",null,Map.of("fullName","Bad","email","invalid","password","short")).status()).isEqualTo(400);
+        var login=request("POST","/api/auth/login",null,Map.of("email",email.toUpperCase(Locale.ROOT),"password","PortalTest123!"));
+        assertThat(login.status()).isEqualTo(200);
+        assertThat(request("GET","/api/admin/users",login.body().get("accessToken").asString(),null).status()).isEqualTo(403);
+    }
     @AfterEach void cleanupOnlyOwnFixtures() {
         new TransactionTemplate(transactions).executeWithoutResult(tx->{
             if (showtimeId!=null) {

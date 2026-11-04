@@ -30,10 +30,15 @@ class BookingSqlServerTest {
     @Autowired ShowtimeRepository showtimes;
     @Autowired SeatRepository seats;
     @Autowired TicketRepository tickets;
+    @Autowired java.time.Clock clock;
 
     @Test void bookingCreatesPaidBookingAnd32CharacterUnusedTicket() {
         var user = users.findByEmail("customer@cinema.test").orElseThrow();
-        var show = showtimes.findAll().stream().filter(s -> s.getStartTime().isAfter(java.time.LocalDateTime.now())).findFirst().orElseThrow();
+        var original = showtimes.findAll().getFirst();
+        var show = new com.backend.cenima.Entity.Showtime();
+        show.setMovie(original.getMovie()); show.setRoom(original.getRoom()); show.setPrice(original.getPrice());
+        show.setStartTime(java.time.LocalDateTime.now(clock).plusDays(3));
+        showtimes.saveAndFlush(show); // Rolled back with this test; never rely on dated seed showtimes.
         var taken = tickets.findSeatIdsByShowtimeAndStatusNot(show.getId(), TicketStatus.CANCELLED);
         var seat = seats.findByRoom_IdOrderByRowNameAscSeatNumberAsc(show.getRoom().getId()).stream()
                 .filter(s -> !taken.contains(s.getId())).findFirst().orElseThrow();

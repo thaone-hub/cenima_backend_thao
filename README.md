@@ -1,4 +1,4 @@
-# Cinema — Thảo + Ngọc E-Ticket
+# Star Cinema — Thảo + Ngọc E-Ticket
 
 Giữ module Maven **`cenima/`**, Java 21, Spring Boot 4.1.2 và package `com.backend.cenima`. Authentication Thảo và E-Ticket Ngọc nối qua adapter; SQL Server là DB duy nhất. Không cần nguồn `src/backend` để chạy repo tích hợp.
 
@@ -17,6 +17,10 @@ Từ root repo/worktree, với Java 21 (`JAVA_HOME`), SQL Server TCP/IP và `sql
 ./tools/Set-DemoPasswords.ps1
 . ./cenima/.local/demo-auth.ps1
 
+# Đổi tài khoản ADMIN seed sang admin123@, nhập mật khẩu khi được hỏi.
+# Chỉ dùng trên DB demo local; không sửa CUSTOMER hoặc STAFF.
+./tools/Set-LocalAdmin.ps1
+
 $env:DEBUG='false'
 ./cenima/mvnw.cmd -B -f cenima/pom.xml clean verify
 Set-Location cenima
@@ -26,6 +30,33 @@ java -jar target/cenima-0.0.1-SNAPSHOT.jar --spring.profiles.active=integrated
 **Workspace hiện tại đã có DB/login/password demo**: chỉ nạp lại `.local/env.ps1` và `.local/demo-auth.ps1`. Không chạy lại schema lên DB đã có bảng. Login SQL và password demo được sinh ngẫu nhiên, không in ra terminal, lưu dưới `.local` bị Git bỏ qua. Tài khoản SQL chỉ có reader/writer trên hai DB riêng; các helper tạo DB/bootstrap cần Windows Authentication đủ quyền.
 
 SQL Server khác: DBA chạy schema/migration và cấp login ứng dụng, sau đó đặt `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`. `cenima/.env.example` chỉ là mẫu; Spring không tự nạp `.env`. Kết nối triển khai dùng `encrypt=true;trustServerCertificate=false`; local test dùng `trustServerCertificate=true` cho chứng thư tự ký. Không ghi password/private key vào Git.
+
+## Mở giao diện và đăng nhập admin
+
+Sau khi đã cấu hình database và build lần đầu, chạy từ thư mục gốc **Cinema**:
+
+```powershell
+./tools/Start-Portal.ps1
+# Khi vừa sửa code, dừng tiến trình cũ bằng Ctrl+C rồi build/chạy lại:
+# ./tools/Start-Portal.ps1 -Build
+```
+
+Mở http://127.0.0.1:8080/login.html, nhập tài khoản **`admin123@`** và mật khẩu đã thiết lập. Đăng nhập bằng ADMIN tự chuyển sang http://127.0.0.1:8080/admin.html. Cũng có thể mở thẳng `/admin.html` rồi bấm “Đăng nhập”. Nếu đang dùng tài khoản USER, đăng xuất trước.
+
+Trên máy local đã cấu hình, lấy mật khẩu bằng cách nạp file và sao chép vào clipboard, không in mật khẩu ra terminal:
+
+```powershell
+. ./cenima/.local/admin-auth.ps1
+Set-Clipboard $env:CINEMA_ADMIN_PASSWORD
+```
+
+Máy mới clone không có `.local` hoặc database của máy khác. Hoàn thành mục cài đặt phía trên rồi chạy `./tools/Set-LocalAdmin.ps1` để chọn mật khẩu riêng. Script yêu cầu Java 21, Maven wrapper, `sqlcmd` và Windows Authentication có quyền cập nhật DB `CINEMA_THAO_ETICKET_DEMO`; chỉ đổi đúng tài khoản ADMIN seed/đã cấu hình, giữ UserID và quyền, lưu BCrypt trong DB và thu hồi refresh token cũ. Chạy lại script chỉ khi muốn đổi mật khẩu admin, không chạy mỗi lần mở ứng dụng. Nếu bỏ qua bước này, tài khoản seed vẫn là `admin@cinema.test` với mật khẩu từ `.local/demo-auth.ps1`.
+
+ADMIN xem thống kê, quản lý phim và khóa/mở khóa tài khoản USER/STAFF; không khóa ADMIN tại giao diện này. API `/api/admin/**` yêu cầu quyền ADMIN ở backend. Đăng ký công khai chỉ tạo USER (role `CUSTOMER` trong DB), không cấp quyền ADMIN. Tên đăng nhập `admin123@` được chấp nhận tại form đăng nhập; đăng ký vẫn yêu cầu email hợp lệ.
+
+Trang chủ: http://127.0.0.1:8080/; trang phim: `/movies.html`; quầy kiểm tra vé: `/check-in.html` (STAFF/ADMIN). Nếu kết nối bị từ chối, kiểm tra ứng dụng đã chạy và SQL Server đang hoạt động. Nếu trang quản trị báo chưa đăng nhập, đăng nhập lại bằng tài khoản ADMIN; nhấn Ctrl+F5 sau khi cập nhật giao diện.
+
+Các file giao diện nằm trong `cenima/src/main/resources/static/`: `index.html` và bản sao `demo/index.html`, `movies.html`, `login.html`, `register.html`, `admin.html`, CSS/JavaScript/poster/font trong `assets/`. Danh mục NCC là dữ liệu tham khảo lưu local; quản lý phim admin thao tác dữ liệu SQL Server. Phim NCC chưa có suất chiếu trong Star Cinema dẫn đến nguồn NCC, không tự tạo lịch đặt vé.
 
 ## Authentication và vé
 
@@ -37,10 +68,10 @@ Sau khi nạp `.local/demo-auth.ps1`, lấy token thật:
 $base='http://127.0.0.1:8080'
 $login=Invoke-RestMethod "$base/api/auth/login" -Method Post -ContentType application/json `
   -Body (@{email='customer@cinema.test';password=$env:CINEMA_DEMO_PASSWORD} | ConvertTo-Json)
-# Dùng $login.accessToken ở ô Access token đăng nhập trong giao diện.
+# Dùng $login.accessToken trong header Authorization: Bearer khi gọi API.
 ```
 
-Mở [trang vé](http://127.0.0.1:8080/demo/index.html) hoặc [check-in](http://127.0.0.1:8080/demo/check-in.html). Integrated nhập access token, danh sách thuật toán sẽ được tải lại. CUSTOMER sở hữu vé hoặc ADMIN phát hành; STAFF/ADMIN verify/check-in. Seed có `customer@cinema.test`, `staff@cinema.test`, `admin@cinema.test`; lấy ID vé thực tế từ seed/DB. Không mặc định ID trên DB đã có dữ liệu.
+Giao diện tự gửi access token sau khi đăng nhập; người dùng xem vé tại “Vé của tôi”, STAFF/ADMIN mở [check-in](http://127.0.0.1:8080/check-in.html). CUSTOMER sở hữu vé hoặc ADMIN phát hành; STAFF/ADMIN verify/check-in. Seed gốc có `customer@cinema.test`, `staff@cinema.test`, `admin@cinema.test`; script thiết lập admin đổi tài khoản cuối thành `admin123@`. Lấy ID vé thực tế từ seed/DB, không mặc định ID trên DB đã có dữ liệu.
 
 Integrated bật **RS256, ES256, EdDSA thật** qua Nimbus/Tink của Thảo; ML-DSA-44 chưa có provider, báo unavailable/503. Vé dùng `typ=eticket+jwt`, `iss=cinema-ticket`, `aud=cinema-checkin`; không thể dùng làm access/refresh token. `X-User-Id` bị bỏ qua trong integrated, kể cả booking.
 
@@ -79,4 +110,4 @@ JUnit chỉ bật test SQL khi `TEST_DB_URL` trỏ `CINEMA_THAO_ETICKET_TEST`. T
 
 [Ghép module và 9 file chung](docs/INTEGRATION.md) · [API](docs/API.md) · [Thiết kế](docs/DESIGN.md) · [Test](docs/TESTING.md) · [Camera/HTTPS](docs/CAMERA.md) · [Thư viện](docs/THIRD_PARTY.md).
 
-Bản thay đổi trên branch `feat/ngoc-eticket` chưa commit hoặc push, sẵn sàng review.
+Các cập nhật giao diện Star Cinema và backend quản trị được phát triển trên nhánh `main`.

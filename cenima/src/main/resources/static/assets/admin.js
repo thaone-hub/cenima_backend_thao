@@ -3,7 +3,7 @@
   const guard = document.getElementById("admin-guard");
   const me = await Space.ready;
   if (!me || me.role !== "ADMIN") {
-    guard.innerHTML = `<h2>${me ? "Khu vực dành cho quản trị viên" : "Vui lòng đăng nhập"}</h2><p>${me ? "Tài khoản của bạn không có quyền quản trị." : "Đăng nhập bằng tài khoản admin để tiếp tục."}</p><a class="button gold" href="${me ? "/" : "/login.html"}">${me ? "Về trang chủ" : "Đăng nhập"} ↗</a>`;
+    guard.innerHTML = `<h2>${me ? "Khu vực dành cho quản trị viên" : "Vui lòng đăng nhập"}</h2><p>${me ? "Tài khoản của bạn không có quyền quản trị." : "Đăng nhập bằng tài khoản admin để tiếp tục."}</p><a class="button gold" href="${me ? "/" : "/login.html"}">${me ? "Về trang chủ" : "Đăng nhập"}</a>`;
     return;
   }
   guard.hidden = true;

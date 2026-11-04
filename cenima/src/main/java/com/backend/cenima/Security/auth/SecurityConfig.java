@@ -30,7 +30,11 @@ public class SecurityConfig {
         return http.csrf(c->c.disable()).sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .formLogin(f->f.disable()).httpBasic(b->b.disable()).logout(l->l.disable())
             .authorizeHttpRequests(a->a.requestMatchers("/api/demo/**").denyAll()
-                .requestMatchers("/api/auth/**","/demo/**","/error","/","/index.html","/movies.html","/login.html","/register.html","/admin.html","/check-in.html","/assets/**","/favicon.svg").permitAll().anyRequest().authenticated())
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers(org.springframework.http.HttpMethod.GET,"/api/movies","/api/movies/**","/api/showtimes/*/seats").permitAll()
+                .requestMatchers("/api/auth/login","/api/auth/register","/api/auth/refresh","/api/auth/logout").permitAll()
+                .requestMatchers("/","/index.html","/movies.html","/login.html","/register.html","/admin.html","/check-in.html","/assets/**","/demo/**","/error","/favicon.svg").permitAll()
+                .anyRequest().authenticated())
             .exceptionHandling(e->e.authenticationEntryPoint((request,response,error)->{
                 response.setStatus(401);response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write(request.getRequestURI().startsWith(request.getContextPath()+"/api/tickets")

@@ -62,7 +62,7 @@ public class AuthService {
             LoginRequest request) {
 
         User user = userRepository
-                .findByEmail(request.getEmail())
+                .findByEmail(request.getEmail().trim().toLowerCase(java.util.Locale.ROOT))
                 .orElseThrow(
                         () -> unauthorized(
                                 "Email or password is incorrect"
