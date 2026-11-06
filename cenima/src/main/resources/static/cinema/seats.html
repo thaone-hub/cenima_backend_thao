@@ -1,0 +1,98 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chọn ghế · CineVerse</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        CINE<em>VERSE</em>
+      </a>
+
+      <nav class="topnav">
+        <a href="./index.html">Phim đang chiếu</a>
+        <a href="./login.html" data-auth-link>Đăng nhập</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell page">
+    <div class="breadcrumb">
+      <a href="./index.html">Phim</a>
+      / <span>Chọn ghế</span>
+    </div>
+
+    <div class="eyebrow">Step 02 / 03</div>
+
+    <h1>Chọn ghế ngồi</h1>
+
+    <p class="muted" id="show-details">
+      Đang tải suất chiếu...
+    </p>
+
+    <div id="message" class="notice" hidden></div>
+
+    <div class="flow-layout">
+
+      <section class="panel">
+
+        <div class="cinema-screen">
+          MÀN HÌNH
+        </div>
+
+        <div id="seat-map" class="seat-map"></div>
+
+        <div class="seat-legend">
+          <span><i class="swatch"></i>Thường</span>
+          <span><i class="swatch vip"></i>VIP</span>
+          <span><i class="swatch couple"></i>Đôi</span>
+          <span><i class="swatch selected"></i>Đang chọn</span>
+          <span><i class="swatch booked"></i>Đã đặt</span>
+        </div>
+
+      </section>
+
+      <aside class="panel">
+
+        <h2>Ghế của bạn</h2>
+
+        <div class="line-item">
+          <span class="muted">Ghế đã chọn</span>
+          <strong id="selected-seats">Chưa chọn</strong>
+        </div>
+
+        <div class="line-item">
+          <span class="muted">Tạm tính</span>
+
+          <strong id="estimated-price" class="total">
+            0 ₫
+          </strong>
+        </div>
+
+        <p class="muted">
+          Giá cuối cùng do backend tính.
+          Ghế có thể được người khác đặt trước
+          khi xác nhận.
+        </p>
+
+        <button
+          class="btn primary full"
+          id="continue"
+          disabled
+        >
+          Tiếp tục đặt vé →
+        </button>
+
+      </aside>
+    </div>
+  </main>
+
+  <script type="module" src="./js/seats.js"></script>
+</body>
+</html>

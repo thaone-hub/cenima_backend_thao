@@ -1,0 +1,83 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CineVerse · Đặt vé xem phim</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        CINE<em>VERSE</em>
+      </a>
+
+      <nav class="topnav">
+        <a href="./index.html">Phim đang chiếu</a>
+        <a href="/demo/index.html">E-Ticket Demo</a>
+        <a href="./login.html" data-auth-link>Đăng nhập</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell page">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">The cinema experience</div>
+
+        <h1>
+          Chọn phim hay.<br>
+          <span>Giữ ghế thật nhanh.</span>
+        </h1>
+
+        <p>
+          Khám phá suất chiếu, chọn ghế yêu thích
+          và nhận vé điện tử có chữ ký số JWT
+          cùng mã QR ngay sau khi đặt vé.
+        </p>
+
+        <a href="#movies" class="btn primary">
+          Khám phá phim →
+        </a>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">🍿</div>
+    </section>
+
+    <section id="movies">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Now showing</div>
+          <h2>Phim đang chiếu</h2>
+          <p class="muted" id="movie-count">
+            Đang tải...
+          </p>
+        </div>
+
+        <input
+          class="search"
+          id="search"
+          type="search"
+          placeholder="Tìm tên phim..."
+          aria-label="Tìm phim"
+        >
+      </div>
+
+      <div id="message" class="notice" hidden></div>
+
+      <div id="movie-grid" class="movie-grid"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="shell">
+      CineVerse · Demo đặt vé sử dụng Spring Boot, JWT và QR
+    </div>
+  </footer>
+
+  <script type="module" src="./js/movies.js"></script>
+</body>
+</html>

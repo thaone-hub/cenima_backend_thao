@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chọn suất chiếu · CineVerse</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        CINE<em>VERSE</em>
+      </a>
+
+      <nav class="topnav">
+        <a href="./index.html">Phim đang chiếu</a>
+        <a href="./login.html" data-auth-link>Đăng nhập</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell page">
+    <div class="breadcrumb">
+      <a href="./index.html">Phim</a>
+      / Chọn suất chiếu
+    </div>
+
+    <div class="eyebrow">Step 01 / 03</div>
+
+    <h1 id="movie-title">
+      Đang tải phim...
+    </h1>
+
+    <p class="muted" id="movie-meta"></p>
+
+    <div id="message" class="notice" hidden></div>
+
+    <section class="panel">
+      <h2>Chọn ngày và giờ chiếu</h2>
+
+      <p class="muted">
+        Chỉ hiển thị những suất chiếu chưa bắt đầu.
+      </p>
+
+      <div id="showtime-list"></div>
+    </section>
+  </main>
+
+  <script type="module" src="./js/showtimes.js"></script>
+</body>
+</html>

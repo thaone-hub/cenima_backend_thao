@@ -1,0 +1,89 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập · CineVerse</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html">
+        CINE<em>VERSE</em>
+      </a>
+
+      <nav class="topnav">
+        <a href="./index.html">Trang chủ</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell page">
+    <section class="panel form-compact">
+      <div class="eyebrow">Welcome back</div>
+
+      <h1>Đăng nhập</h1>
+
+      <p class="muted">
+        Dùng tài khoản đã có trong database Cinema
+        để đặt vé.
+      </p>
+
+      <p
+        id="already-logged"
+        class="notice info"
+        hidden
+      >
+        Bạn đã đăng nhập trong tab này.
+        Đăng nhập lại sẽ thay thế phiên cũ.
+      </p>
+
+      <form id="login-form" class="form">
+        <label>
+          Email
+
+          <input
+            id="email"
+            type="email"
+            required
+            autocomplete="username"
+            placeholder="customer@cinema.test"
+          >
+        </label>
+
+        <label>
+          Mật khẩu
+
+          <input
+            id="password"
+            type="password"
+            required
+            autocomplete="current-password"
+            placeholder="Nhập mật khẩu"
+          >
+        </label>
+
+        <button
+          id="login-submit"
+          type="submit"
+          class="btn primary full"
+        >
+          Đăng nhập
+        </button>
+      </form>
+
+      <div id="message" class="notice" hidden></div>
+
+      <p class="muted">
+        Tài khoản demo: customer@cinema.test
+        · dùng mật khẩu do nhóm thiết lập.
+      </p>
+    </section>
+  </main>
+
+  <script type="module" src="./js/auth.js"></script>
+</body>
+</html>
