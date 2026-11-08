@@ -60,6 +60,38 @@ Các file giao diện nằm trong `cenima/src/main/resources/static/`: `index.ht
 
 ## Authentication và vé
 
+### Đặt vé và mở QR trong “Vé của tôi”
+
+Chức năng đặt vé và phát hành JWT đã có trong backend; giao diện “Vé của tôi” sử dụng lại các API này:
+
+1. Đăng nhập, bấm **Vé của tôi** trên menu (hoặc mở `/#my-tickets`).
+2. Trong **Đặt vé mới**, chọn phim tại Star Cinema và bấm **Chọn suất chiếu**.
+3. Chọn suất chiếu còn ở tương lai, chọn các ghế còn trống. Giá STANDARD/VIP/COUPLE được hiển thị; backend tự tính và kiểm tra lại giá, ghế khi đặt.
+4. Bấm **Kiểm tra và xác nhận**, kiểm tra phim, ngày/giờ, phòng, ghế, tổng tiền rồi **Xác nhận đặt vé**. Bấm “Chọn lại” sẽ không tạo đơn.
+5. Vé mới hiện ngay trong **Vé đã đặt**. Bấm **Xem vé / QR** để phát hành và xem QR, hoặc **Tải mã QR** để lưu ảnh. STAFF/ADMIN dùng trang `/check-in.html` để xác minh và check-in.
+
+Danh sách để đặt vé lấy từ SQL Server (`/api/movies?status=1` và `status=2`), không lấy ID phim `ncc-*` của danh mục tham khảo trên trang chủ. Nếu phim chưa có suất chiếu tương lai trong bảng `Showtimes`, giao diện báo chưa có lịch; cần có phim, phòng, ghế và suất chiếu hợp lệ trong database mới đặt được. Giao diện không tự tạo suất chiếu hoặc sửa ngày seed cũ. Chưa tích hợp thanh toán thật; backend hiện đánh dấu đơn đặt thành công là `PAID`.
+
+Để thử ngay khi lịch seed cũ đã hết hạn, có thể chủ động thêm lịch demo từ thư mục gốc (cần `sqlcmd` và Windows Authentication có quyền ghi DB demo):
+
+```powershell
+./tools/Add-DemoShowtimes.ps1
+```
+
+Script chỉ thêm lịch vào `CINEMA_THAO_ETICKET_DEMO`: tối đa ba phim đang chiếu, dùng phòng/ghế hiện có, vào 10:00/14:00/18:00 trong ba ngày tới theo giờ Việt Nam, giá cơ bản 90.000đ. Bỏ qua khung giờ trùng/đè lịch hiện có (chừa 15 phút giữa hai phim); không xóa hoặc sửa lịch/vé cũ. Có thể chọn `-Days 1` đến `-Days 7`. Script không tự chạy khi khởi động ứng dụng.
+
+API dùng trong luồng này: `GET /api/movies/{id}/showtimes`, `GET /api/showtimes/{id}/seats`, `POST /api/bookings`, `GET /api/account/tickets`, `POST /api/tickets/{id}/token`. Access JWT xác thực người đặt; server lấy chủ vé từ phiên đăng nhập, chống trùng ghế bằng ràng buộc SQL. Trùng ghế trả 409 và giao diện tải lại sơ đồ để chọn lại.
+
+QR mặc định dùng **JWT ký số RS256**, không phải mã hóa giấu nội dung. Backend cũng đã có ES256/EdDSA; lần tích hợp giao diện này không thay thuật toán. Chỉ chủ vé hoặc ADMIN được phát hành QR. JWT vé có thời hạn, phân biệt với access token; mỗi vé chỉ check-in một lần. QR quá dài sẽ dùng mã tham chiếu theo cơ chế backend hiện có.
+
+Kiểm thử riêng giao diện bằng Node.js và jsdom (cài trong thư mục local được Git bỏ qua):
+
+```powershell
+npm install --prefix cenima/.local/ui-tests --no-audit --no-fund jsdom@26
+$env:NODE_PATH = (Resolve-Path cenima/.local/ui-tests/node_modules).Path
+node --test tools/test-ticket-ui.cjs
+```
+
 Auth giữ nguyên POST `/api/auth/login` với `{email,password}`, POST `/api/auth/refresh` và `/api/auth/logout` với `{refreshToken}`. Login/refresh trả `accessToken`, `refreshToken`, `tokenType`, `expiresIn`; logout trả 204. Token auth RS256 vẫn có `typ=JWT`, `iss=cenima-auth`, `tokenType=ACCESS/REFRESH`.
 
 Sau khi nạp `.local/demo-auth.ps1`, lấy token thật:
@@ -110,4 +142,11 @@ JUnit chỉ bật test SQL khi `TEST_DB_URL` trỏ `CINEMA_THAO_ETICKET_TEST`. T
 
 [Ghép module và 9 file chung](docs/INTEGRATION.md) · [API](docs/API.md) · [Thiết kế](docs/DESIGN.md) · [Test](docs/TESTING.md) · [Camera/HTTPS](docs/CAMERA.md) · [Thư viện](docs/THIRD_PARTY.md).
 
-Các cập nhật giao diện Star Cinema và backend quản trị được phát triển trên nhánh `main`.
+Nhánh chứa toàn bộ cập nhật giao diện Star Cinema, quản trị và đặt vé/QR: `feat/ngoc-eticket`.
+
+Clone đúng nhánh này trên máy mới:
+
+```powershell
+git clone --branch feat/ngoc-eticket https://github.com/thaone-hub/cenima_backend_thao.git Cinema
+cd Cinema
+```

@@ -105,6 +105,33 @@ class IntegratedSqlServerTest extends SqlServerTestSupport {
         assertThat(login.status()).isEqualTo(200);
         assertThat(request("GET","/api/admin/users",login.body().get("accessToken").asString(),null).status()).isEqualTo(403);
     }
+    @Test void bookingAppearsInMyTicketsAndIssuesAProtectedSingleUseJwtQr() throws Exception {
+        var seatMap=request("GET","/api/showtimes/"+showtimeId+"/seats",null,null);
+        assertThat(seatMap.status()).isEqualTo(200);
+        Integer available=null;
+        for (var seat:seatMap.body()) {
+            if ("AVAILABLE".equals(seat.get("status").asString())) {
+                available=seat.get("seatId").asInt(); break;
+            }
+        }
+        assertThat(available).isNotNull();
+        var booking=request("POST","/api/bookings",ownerAccess,Map.of("showtimeId",showtimeId,"seatIds",List.of(available)));
+        assertThat(booking.status()).isEqualTo(201);
+        int bookedTicket=booking.body().get("tickets").get(0).get("ticketId").asInt();
+        assertThat(request("GET","/api/account/tickets",ownerAccess,null).body().toString())
+            .contains("\"ticketId\":"+bookedTicket);
+        var duplicate=request("POST","/api/bookings",otherAccess,Map.of("showtimeId",showtimeId,"seatIds",List.of(available)));
+        assertThat(duplicate.status()).isEqualTo(409);
+        assertThat(request("POST","/api/tickets/"+bookedTicket+"/token",otherAccess,Map.of("algorithm","RS256")).status()).isEqualTo(403);
+        var issued=request("POST","/api/tickets/"+bookedTicket+"/token",ownerAccess,Map.of("algorithm","RS256"));
+        assertThat(issued.status()).isEqualTo(200);
+        assertThat(issued.body().get("qr").get("pngBase64").asString()).isNotBlank();
+        String token=issued.body().get("token").asString();
+        assertThat(SignedJWT.parse(token).getHeader().getAlgorithm().getName()).isEqualTo("RS256");
+        assertThat(verify(token).status()).isEqualTo(200);
+        assertThat(checkIn(token).status()).isEqualTo(200);
+        assertThat(checkIn(token).status()).isEqualTo(409);
+    }
     @AfterEach void cleanupOnlyOwnFixtures() {
         new TransactionTemplate(transactions).executeWithoutResult(tx->{
             if (showtimeId!=null) {

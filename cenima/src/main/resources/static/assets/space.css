@@ -2857,6 +2857,26 @@ body {
 .carousel-next { right: 22px; }
 #movies-title { margin-bottom: 24px; }
 #schedule-intro { margin-bottom: 28px; }
+.ticket-booking {
+  padding: 28px;
+  margin-bottom: 36px;
+  border: 1px solid #9f6be56b;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #211330, #0d0a15);
+}
+.ticket-booking h3, #saved-tickets-title { font-size: 24px; margin-bottom: 18px; }
+.ticket-booking-form {
+  display: flex; align-items: flex-end; gap: 20px; margin-block: 24px;
+}
+.ticket-booking-form label { flex: 1; min-width: 0; }
+.ticket-booking-form select { width: 100%; margin-top: 10px; min-height: 52px; }
+.ticket-booking-form .button { min-height: 52px; }
+.booking-confirm-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+#booking-confirm-summary { margin-block: 24px; line-height: 1.8; }
+@media (max-width: 600px) {
+  .ticket-booking { padding: 20px; }
+  .ticket-booking-form { flex-direction: column; align-items: stretch; }
+}
 @media (max-width: 850px) {
   .film-carousel { height: 56.25vw; min-height: 0; }
   .carousel-side { width: 43px; height: 59px; font-size: 24px; }
