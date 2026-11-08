@@ -22,7 +22,7 @@ END;
 
 -- 1 = chi xem truoc, tu dong ROLLBACK
 -- 0 = luu thay doi vao database
-DECLARE @PreviewOnly bit = 1;
+DECLARE @PreviewOnly bit = 0;
 
 -- 1 = an 5 phim mau cu khoi danh sach mo ban
 -- 0 = giu nguyen trang thai phim cu
