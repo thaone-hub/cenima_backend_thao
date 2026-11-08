@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-# Star Cinema — Thảo + Ngọc E-Ticket
-=======
 # CineVerse — Website đặt vé xem phim, E-Ticket JWT & QR
->>>>>>> origin/trang_new
 
 > **Dự án Java Spring Boot + Microsoft SQL Server** — đăng nhập, chọn phim/suất chiếu/ghế, đặt vé, phát hành và xác minh vé điện tử sử dụng JWT; nghiên cứu so sánh **RS256, ES256, EdDSA và ML-DSA-44 (Post-Quantum)**.
 >
@@ -29,16 +25,6 @@
 
 ## 1. Giới thiệu và trạng thái
 
-<<<<<<< HEAD
-# Đổi tài khoản ADMIN seed sang admin123@, nhập mật khẩu khi được hỏi.
-# Chỉ dùng trên DB demo local; không sửa CUSTOMER hoặc STAFF.
-./tools/Set-LocalAdmin.ps1
-
-$env:DEBUG='false'
-./cenima/mvnw.cmd -B -f cenima/pom.xml clean verify
-Set-Location cenima
-java -jar target/cenima-0.0.1-SNAPSHOT.jar --spring.profiles.active=integrated
-=======
 **CineVerse** là hệ thống đặt vé xem phim, gồm:
 
 - **Khách hàng (CUSTOMER):** đăng nhập; duyệt phim, chọn suất chiếu và ghế; tạo booking; xem từng vé; phát hành JWT và QR.
@@ -106,7 +92,6 @@ Browser / CineVerse (/cinema/)
                      Verify (không dùng vé) / Check-in
                                         │
                               Ticket UNUSED → USED
->>>>>>> origin/trang_new
 ```
 
 ### Phân biệt 2 loại JWT
@@ -114,49 +99,6 @@ Browser / CineVerse (/cinema/)
 1. **JWT đăng nhập:** được hệ thống Authentication cấp, dùng trong HTTP header `Authorization: Bearer <accessToken>`; thuật toán RS256.
 2. **JWT vé:** có `typ=eticket+jwt`, `iss=cinema-ticket`, `aud=cinema-checkin`; ký bằng thuật toán E-Ticket đã chọn. **Không dùng JWT vé để đăng nhập.**
 
-<<<<<<< HEAD
-## Mở giao diện và đăng nhập admin
-
-Sau khi đã cấu hình database và build lần đầu, chạy từ thư mục gốc **Cinema**:
-
-```powershell
-./tools/Start-Portal.ps1
-# Khi vừa sửa code, dừng tiến trình cũ bằng Ctrl+C rồi build/chạy lại:
-# ./tools/Start-Portal.ps1 -Build
-```
-
-Mở http://127.0.0.1:8080/login.html, nhập tài khoản **`admin123@`** và mật khẩu đã thiết lập. Đăng nhập bằng ADMIN tự chuyển sang http://127.0.0.1:8080/admin.html. Cũng có thể mở thẳng `/admin.html` rồi bấm “Đăng nhập”. Nếu đang dùng tài khoản USER, đăng xuất trước.
-
-Trên máy local đã cấu hình, lấy mật khẩu bằng cách nạp file và sao chép vào clipboard, không in mật khẩu ra terminal:
-
-```powershell
-. ./cenima/.local/admin-auth.ps1
-Set-Clipboard $env:CINEMA_ADMIN_PASSWORD
-```
-
-Máy mới clone không có `.local` hoặc database của máy khác. Hoàn thành mục cài đặt phía trên rồi chạy `./tools/Set-LocalAdmin.ps1` để chọn mật khẩu riêng. Script yêu cầu Java 21, Maven wrapper, `sqlcmd` và Windows Authentication có quyền cập nhật DB `CINEMA_THAO_ETICKET_DEMO`; chỉ đổi đúng tài khoản ADMIN seed/đã cấu hình, giữ UserID và quyền, lưu BCrypt trong DB và thu hồi refresh token cũ. Chạy lại script chỉ khi muốn đổi mật khẩu admin, không chạy mỗi lần mở ứng dụng. Nếu bỏ qua bước này, tài khoản seed vẫn là `admin@cinema.test` với mật khẩu từ `.local/demo-auth.ps1`.
-
-ADMIN xem thống kê, quản lý phim và khóa/mở khóa tài khoản USER/STAFF; không khóa ADMIN tại giao diện này. API `/api/admin/**` yêu cầu quyền ADMIN ở backend. Đăng ký công khai chỉ tạo USER (role `CUSTOMER` trong DB), không cấp quyền ADMIN. Tên đăng nhập `admin123@` được chấp nhận tại form đăng nhập; đăng ký vẫn yêu cầu email hợp lệ.
-
-Trang chủ: http://127.0.0.1:8080/; trang phim: `/movies.html`; quầy kiểm tra vé: `/check-in.html` (STAFF/ADMIN). Nếu kết nối bị từ chối, kiểm tra ứng dụng đã chạy và SQL Server đang hoạt động. Nếu trang quản trị báo chưa đăng nhập, đăng nhập lại bằng tài khoản ADMIN; nhấn Ctrl+F5 sau khi cập nhật giao diện.
-
-Các file giao diện nằm trong `cenima/src/main/resources/static/`: `index.html` và bản sao `demo/index.html`, `movies.html`, `login.html`, `register.html`, `admin.html`, CSS/JavaScript/poster/font trong `assets/`. Danh mục NCC là dữ liệu tham khảo lưu local; quản lý phim admin thao tác dữ liệu SQL Server. Phim NCC chưa có suất chiếu trong Star Cinema dẫn đến nguồn NCC, không tự tạo lịch đặt vé.
-
-## Authentication và vé
-
-Auth giữ nguyên POST `/api/auth/login` với `{email,password}`, POST `/api/auth/refresh` và `/api/auth/logout` với `{refreshToken}`. Login/refresh trả `accessToken`, `refreshToken`, `tokenType`, `expiresIn`; logout trả 204. Token auth RS256 vẫn có `typ=JWT`, `iss=cenima-auth`, `tokenType=ACCESS/REFRESH`.
-
-Sau khi nạp `.local/demo-auth.ps1`, lấy token thật:
-
-```powershell
-$base='http://127.0.0.1:8080'
-$login=Invoke-RestMethod "$base/api/auth/login" -Method Post -ContentType application/json `
-  -Body (@{email='customer@cinema.test';password=$env:CINEMA_DEMO_PASSWORD} | ConvertTo-Json)
-# Dùng $login.accessToken trong header Authorization: Bearer khi gọi API.
-```
-
-Giao diện tự gửi access token sau khi đăng nhập; người dùng xem vé tại “Vé của tôi”, STAFF/ADMIN mở [check-in](http://127.0.0.1:8080/check-in.html). CUSTOMER sở hữu vé hoặc ADMIN phát hành; STAFF/ADMIN verify/check-in. Seed gốc có `customer@cinema.test`, `staff@cinema.test`, `admin@cinema.test`; script thiết lập admin đổi tài khoản cuối thành `admin123@`. Lấy ID vé thực tế từ seed/DB, không mặc định ID trên DB đã có dữ liệu.
-=======
 ## 3. Cấu trúc source
 
 ```text
@@ -218,7 +160,6 @@ cenima_backend_moi/                   # Root repository
 ```
 
 > Cấu trúc trên phản ánh source tích hợp đã xem **cộng với các file frontend/ML-DSA được thêm trong quá trình làm việc**. Các file bổ sung phải tồn tại trên máy local của bạn mới chạy được; repository GitHub có thể chưa nhận đủ các thay đổi chưa commit/push.
->>>>>>> origin/trang_new
 
 ## 4. Chuẩn bị môi trường
 
@@ -706,6 +647,7 @@ git push -u origin feat/huong-ml-dsa
 **Khi làm việc với nhóm:**
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 Các cập nhật giao diện Star Cinema và backend quản trị được phát triển trên nhánh `main`.
 =======
 ```powershell
@@ -794,3 +736,13 @@ java -jar target\cenima-0.0.1-SNAPSHOT.jar --spring.profiles.active=integrated -
 
 > Đối chiếu: source ZIP của nhóm (26/10/2026), tài liệu `docs/` trong repo và các kết quả chạy/test/giao diện do nhóm cung cấp đến 27/10/2026. Một số thành phần được thêm trên máy local sau bản ZIP; khi đưa lên Git, cần kiểm tra lại cấu hình và tập tin thực tế của branch mới nhất.
 >>>>>>> origin/trang_new
+=======
+Nhánh chứa toàn bộ cập nhật giao diện Star Cinema, quản trị và đặt vé/QR: `feat/ngoc-eticket`.
+
+Clone đúng nhánh này trên máy mới:
+
+```powershell
+git clone --branch feat/ngoc-eticket https://github.com/thaone-hub/cenima_backend_thao.git Cinema
+cd Cinema
+```
+>>>>>>> origin/feat/ngoc-eticket

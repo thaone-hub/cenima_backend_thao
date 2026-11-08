@@ -73,7 +73,8 @@
         });
         Space.save(session);
         const account = await Space.api("/api/account/me");
-        location.assign(account.role === "ADMIN" ? "/admin.html" : "/#movies");
+        const next = new URLSearchParams(location.search).get("next");
+        location.assign(next === "tickets" ? "/#my-tickets" : account.role === "ADMIN" ? "/admin.html" : "/#movies");
       }
     } catch (error) {
       message.textContent = error.message;

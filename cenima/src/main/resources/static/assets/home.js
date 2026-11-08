@@ -102,8 +102,41 @@
     .getElementById("movie-search")
     .addEventListener("input", renderMovies);
   const dialog = document.getElementById("movie-dialog");
+  const confirmDialog = document.getElementById("booking-confirm-dialog");
+  let bookingMovies = [], bookingLoad = 0, ticketLoad = 0;
+  async function loadBookingMovies() {
+    const version = ++bookingLoad;
+    const select = document.getElementById("booking-movie");
+    const button = document.getElementById("choose-showtime");
+    const message = document.getElementById("ticket-booking-message");
+    select.disabled = button.disabled = true;
+    message.textContent = "Đang tải danh sách phim tại Star Cinema…";
+    try {
+      const lists = await Promise.all([api("/api/movies?status=1"), api("/api/movies?status=2")]);
+      if (version !== bookingLoad) return;
+      bookingMovies = lists.flat();
+      select.innerHTML = '<option value="">Chọn phim muốn đặt vé</option>' + bookingMovies
+        .map((movie) => `<option value="${e(movie.id)}">${e(movie.title)}</option>`).join("");
+      select.disabled = !bookingMovies.length;
+      message.textContent = bookingMovies.length
+        ? "Chỉ đặt vé cho phim có suất chiếu tại Star Cinema. Phim tham khảo từ NCC trên trang chủ thuộc danh mục riêng."
+        : "Chưa có phim được mở bán tại Star Cinema. Vui lòng quay lại sau.";
+    } catch (error) {
+      if (version !== bookingLoad) return;
+      select.innerHTML = '<option value="">Không tải được danh sách phim</option>';
+      message.textContent = error.message + " Bấm Tải lại vé để thử lại.";
+    }
+  }
+  document.getElementById("booking-movie").addEventListener("change", (event) => {
+    document.getElementById("choose-showtime").disabled = !event.target.value;
+  });
+  document.getElementById("ticket-booking-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const movie = bookingMovies.find((item) => String(item.id) === document.getElementById("booking-movie").value);
+    if (movie) openMovie(movie, true);
+  });
   let detailVersion = 0;
-  async function openMovie(movie) {
+  async function openMovie(movie, booking = false) {
     if (!movie) return;
     const version = ++detailVersion;
     const detail = document.getElementById("movie-detail");
@@ -111,6 +144,9 @@
     dialog.setAttribute("aria-labelledby", "detail-title");
     if (!dialog.open) dialog.showModal();
     dialog.scrollTop = 0;
+    if (booking) requestAnimationFrame(() => {
+      if (version === detailVersion) detail.querySelector(".booking-area").scrollIntoView({ block: "start" });
+    });
     if (movie.sourceId) {
       document.getElementById("showtimes").innerHTML =
         `<div class="source-schedule"><p>Phim chưa được mở lịch đặt vé tại Star Cinema.</p><a class="button gold" href="${e(movie.sourceUrl)}" target="_blank" rel="noopener noreferrer">Xem lịch chiếu tại NCC</a></div>`;
@@ -127,7 +163,7 @@
                 `<button class="showtime" data-showtime="${show.id}">${e(show.startTime.slice(11, 16))} · ${date(show.startTime)}<small>${e(show.roomName)} / Từ ${money(show.price)}</small></button>`,
             )
             .join("")
-        : '<p class="muted">Phim chưa có suất chiếu sắp tới. Vui lòng quay lại sau.</p>';
+        : '<p class="muted">Phim chưa có suất chiếu sắp tới tại Star Cinema. Vui lòng chọn phim khác hoặc quay lại sau.</p>';
       target.querySelectorAll("button").forEach((button) =>
         button.addEventListener("click", () =>
           selectShowtime(
@@ -135,7 +171,7 @@
               (show) => show.id === Number(button.dataset.showtime),
             ),
             button,
-            version,
+            version, movie,
           ),
         ),
       );
@@ -149,7 +185,7 @@
     openMovie(source?.movies?.find((movie) => movie.id === event.detail.id));
   });
   let seatsVersion = 0;
-  async function selectShowtime(show, button, detailId) {
+  async function selectShowtime(show, button, detailId, movie) {
     const version = ++seatsVersion;
     document
       .querySelectorAll(".showtime")
@@ -169,7 +205,7 @@
               map.set(seat.rowName, [...(map.get(seat.rowName) || []), seat]),
             new Map(),
           );
-      target.innerHTML = `<div class="screen">MÀN HÌNH</div><div class="seat-map" aria-label="Sơ đồ chỗ ngồi">${[...rows].map(([row, items]) => `<div class="seat-row"><span>${e(row)}</span>${items.map((seat) => `<button class="seat ${seat.seatType === "VIP" ? "vip" : ""}" data-seat="${seat.seatId}" ${seat.status !== "AVAILABLE" ? "disabled" : ""} aria-pressed="false" aria-label="Ghế ${e(seat.rowName)}${seat.seatNumber}, ${e(seat.seatType)}, ${seat.status === "AVAILABLE" ? "còn trống" : "đã đặt"}">${seat.seatNumber}</button>`).join("")}</div>`).join("")}</div><div class="seat-legend"><span>Ghế trống</span><span class="selected">Đang chọn</span><span class="booked">Đã đặt</span></div><div class="booking-total"><div><p id="selected-seats">Chưa chọn ghế</p><strong id="total-price">${money(0)}</strong><p class="small">Đặt vé demo, chưa tích hợp thanh toán thật.</p></div><button class="button gold" id="book" disabled>Xác nhận đặt vé ↗</button></div>`;
+      target.innerHTML = `<div class="screen">MÀN HÌNH</div><div class="seat-map" aria-label="Sơ đồ chỗ ngồi">${[...rows].map(([row, items]) => `<div class="seat-row"><span>${e(row)}</span>${items.map((seat) => `<button class="seat ${seat.seatType === "VIP" ? "vip" : ""}" data-seat="${seat.seatId}" ${seat.status !== "AVAILABLE" ? "disabled" : ""} aria-pressed="false" aria-label="Ghế ${e(seat.rowName)}${seat.seatNumber}, ${e(seat.seatType)}, ${seat.status === "AVAILABLE" ? "còn trống" : "đã đặt"}">${seat.seatNumber}</button>`).join("")}</div>`).join("")}</div><div class="seat-legend"><span>Ghế trống</span><span class="selected">Đang chọn</span><span class="booked">Đã đặt</span></div><div class="booking-total"><div><p id="selected-seats">Chưa chọn ghế</p><strong id="total-price">${money(0)}</strong><p class="small">Đặt vé demo, chưa tích hợp thanh toán thật.</p></div><button class="button gold" id="book" disabled>Kiểm tra và xác nhận</button></div>`;
       const price = (seat) =>
         Number(show.price) *
         (seat.seatType === "VIP" ? 1.5 : seat.seatType === "COUPLE" ? 2 : 1);
@@ -194,14 +230,26 @@
         .getElementById("book")
         .addEventListener("click", async (event) => {
           const bookButton = event.currentTarget;
+          if (bookButton.disabled || !selected.size) return;
+          bookButton.disabled = true;
           await Space.ready;
           if (!Space.me) {
-            location.assign("/login.html");
+            location.assign("/login.html?next=tickets");
             return;
           }
-          bookButton.disabled = true;
+          if (version !== seatsVersion || detailId !== detailVersion) return;
+          const chosen = seats.filter((seat) => selected.has(seat.seatId));
+          document.getElementById("booking-confirm-summary").innerHTML =
+            `<h3>${e(movie.title)}</h3><p>${date(show.startTime)} · ${e(show.startTime.slice(11, 16))}<br>${e(show.roomName)}</p><p>Ghế: <strong>${e(chosen.map((seat) => seat.rowName + seat.seatNumber).join(", "))}</strong></p><p>Tổng tiền: <strong>${money(chosen.reduce((sum, seat) => sum + price(seat), 0))}</strong></p>`;
+          confirmDialog.returnValue = "cancel";
+          const confirmation = new Promise((resolve) => confirmDialog.addEventListener("close", () => resolve(confirmDialog.returnValue === "confirm"), { once: true }));
+          confirmDialog.showModal();
+          if (!await confirmation) { bookButton.disabled = false; return; }
+          if (version !== seatsVersion || detailId !== detailVersion) return;
           const message = document.getElementById("booking-message");
           message.hidden = true;
+          target.inert = true;
+          document.getElementById("showtimes").inert = true;
           try {
             const result = await api("/api/bookings", {
               method: "POST",
@@ -211,14 +259,25 @@
             Space.toast(
               `Đặt vé thành công · ${money(result.totalPrice)}. Vé đã có trong “Vé của tôi”.`,
             );
-            location.hash = "my-tickets";
+            if (location.hash === "#my-tickets") await loadTickets();
+            else location.hash = "my-tickets";
+            document.getElementById("my-tickets").hidden = false;
             document
               .getElementById("my-tickets")
               .scrollIntoView({ behavior: "smooth" });
           } catch (error) {
+            if (version !== seatsVersion || detailId !== detailVersion) return;
             message.textContent = error.message;
             message.hidden = false;
             bookButton.disabled = false;
+            if (error.status === 409) {
+              await selectShowtime(show, button, detailId, movie);
+              message.textContent = "Ghế vừa được người khác đặt. Sơ đồ đã được cập nhật, vui lòng chọn lại.";
+              message.hidden = false;
+            }
+          } finally {
+            target.inert = false;
+            if (detailId === detailVersion) document.getElementById("showtimes").inert = false;
           }
         });
     } catch (error) {
@@ -226,16 +285,23 @@
     }
   }
   async function loadTickets() {
+    const version = ++ticketLoad;
     await Space.ready;
-    if (!Space.me) return;
+    if (version !== ticketLoad) return;
+    document.getElementById("tickets-auth").hidden = !!Space.me;
+    document.getElementById("ticket-booking").hidden = !Space.me;
+    document.getElementById("saved-tickets-title").hidden = !Space.me;
     const target = document.getElementById("tickets-grid");
+    if (!Space.me) { target.replaceChildren(); return; }
+    target.innerHTML = '<p class="empty-state">Đang tải vé của bạn…</p>';
     try {
       const tickets = await api("/api/account/tickets");
+      if (version !== ticketLoad) return;
       target.innerHTML = tickets.length
         ? tickets
             .map(
               (ticket) =>
-                `<article class="ticket-card"><p class="eyebrow">TICKET / ${ticket.ticketId}</p><h3>${e(ticket.movieTitle)}</h3><p>${date(ticket.startTime)} · ${e(ticket.startTime.slice(11, 16))}<br>${e(ticket.roomName)} / Ghế ${e(ticket.seatCode)}</p><span class="badge">${ticket.status === "USED" ? "Đã sử dụng" : ticket.status === "CANCELLED" ? "Đã hủy" : new Date(ticket.startTime) < new Date() ? "Suất chiếu đã bắt đầu" : "Chưa sử dụng"}</span><br><button class="button outline" data-qr="${ticket.ticketId}" ${ticket.status !== "UNUSED" ? "disabled" : ""}>Mở vé điện tử ↗</button></article>`,
+                `<article class="ticket-card"><p class="eyebrow">TICKET / ${ticket.ticketId}</p><h3>${e(ticket.movieTitle)}</h3><p>${date(ticket.startTime)} · ${e(ticket.startTime.slice(11, 16))}<br>${e(ticket.roomName)} / Ghế ${e(ticket.seatCode)}</p><span class="badge">${ticket.status === "USED" ? "Đã sử dụng" : ticket.status === "CANCELLED" ? "Đã hủy" : new Date(ticket.startTime) < new Date() ? "Suất chiếu đã bắt đầu" : "Chưa sử dụng"}</span><br><button class="button outline" data-qr="${ticket.ticketId}" ${ticket.status !== "UNUSED" ? "disabled" : ""}>Xem vé / QR</button></article>`,
             )
             .join("")
         : '<p class="empty-state">Bạn chưa có vé nào. Chọn một bộ phim để bắt đầu hành trình.</p>';
@@ -248,7 +314,7 @@
               { method: "POST", body: { algorithm: "RS256" } },
             );
             document.getElementById("qr-content").innerHTML =
-              `<img class="qr-image" src="data:image/png;base64,${e(result.qr.pngBase64)}" alt="Mã QR vé điện tử"><p class="qr-note">${e(result.ticket.movieTitle)} · Ghế ${e(result.ticket.seatCode)}<br>Vui lòng xuất trình mã này khi check-in.</p>`;
+              `<img class="qr-image" src="data:image/png;base64,${e(result.qr.pngBase64)}" alt="Mã QR vé điện tử"><p class="qr-note"><strong>${e(result.ticket.movieTitle)}</strong><br>${date(result.ticket.startTime)} · ${e(result.ticket.startTime.slice(11, 16))}<br>${e(result.ticket.roomName)} · Ghế ${e(result.ticket.seatCode)}<br>Mã vé: ${e(result.ticket.ticketCode)}</p><p class="small muted">Vé được ký số JWT ${e(result.algorithm)} để chống sửa thông tin. Xuất trình QR khi check-in; mỗi vé chỉ sử dụng một lần.</p><a class="button outline" href="data:image/png;base64,${e(result.qr.pngBase64)}" download="star-cinema-ticket-${result.ticket.ticketId}.png">Tải mã QR</a>`;
             document.getElementById("qr-dialog").showModal();
           } catch (error) {
             Space.toast(error.message);
@@ -258,12 +324,12 @@
         }),
       );
     } catch (error) {
-      target.textContent = error.message;
+      if (version === ticketLoad) target.textContent = error.message;
     }
   }
   document
     .getElementById("reload-tickets")
-    .addEventListener("click", loadTickets);
+    .addEventListener("click", () => { loadTickets(); loadBookingMovies(); });
   function renderView() {
     const catalog = document.body.dataset.view === "movies" || location.hash === "#movies";
     const tickets = location.hash === "#my-tickets";
@@ -271,7 +337,7 @@
     document.getElementById("movies").hidden = tickets;
     document.getElementById("my-tickets").hidden = !tickets;
     if (movies.length) renderMovies();
-    if (tickets) loadTickets();
+    if (tickets) { loadTickets(); loadBookingMovies(); }
   }
   renderView();
   window.addEventListener("hashchange", renderView);

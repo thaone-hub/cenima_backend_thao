@@ -75,10 +75,12 @@ window.Space = (() => {
         );
       if (response.status === 403)
         throw new Error("Bạn không có quyền thực hiện thao tác này.");
-      throw new Error(
+      const error = new Error(
         message ||
           `Không thể xử lý yêu cầu (${response.status}). Vui lòng thử lại.`,
       );
+      error.status = response.status;
+      throw error;
     }
     return data;
   }

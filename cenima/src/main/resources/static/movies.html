@@ -115,7 +115,25 @@
             Tải lại vé ↻
           </button>
         </div>
-        <div class="tickets-grid" id="tickets-grid"></div>
+        <div id="tickets-auth" class="empty-state" hidden>
+          <p>Đăng nhập để đặt vé và xem vé của bạn.</p>
+          <a class="button gold" href="/login.html?next=tickets">Đăng nhập</a>
+        </div>
+        <section id="ticket-booking" class="ticket-booking" aria-labelledby="ticket-booking-title" hidden>
+          <h3 id="ticket-booking-title">Đặt vé mới</h3>
+          <p class="muted">Chọn phim → Chọn suất chiếu → Chọn ghế → Xác nhận đặt vé</p>
+          <form id="ticket-booking-form" class="ticket-booking-form">
+            <label for="booking-movie">Phim tại Star Cinema
+              <select id="booking-movie" required disabled>
+                <option value="">Đang tải phim…</option>
+              </select>
+            </label>
+            <button class="button gold" id="choose-showtime" type="submit" disabled>Chọn suất chiếu</button>
+          </form>
+          <p id="ticket-booking-message" class="muted" role="status"></p>
+        </section>
+        <h3 id="saved-tickets-title" hidden>Vé đã đặt</h3>
+        <div class="tickets-grid" id="tickets-grid" aria-live="polite"></div>
       </section>
     </main>
     <footer id="site-footer"></footer>
@@ -124,10 +142,20 @@
       <button class="close-modal" aria-label="Đóng">×</button>
       <div id="movie-detail"></div>
     </dialog>
-    <dialog id="qr-dialog" class="modal">
+    <dialog id="booking-confirm-dialog" class="modal" aria-labelledby="booking-confirm-title">
+      <button class="close-modal" aria-label="Đóng">×</button>
+      <h2 id="booking-confirm-title">Xác nhận đặt vé</h2>
+      <div id="booking-confirm-summary"></div>
+      <p class="muted">Kiểm tra phim, suất chiếu và ghế trước khi xác nhận. Chưa tích hợp thanh toán trực tuyến.</p>
+      <form method="dialog" class="booking-confirm-actions">
+        <button class="button outline" value="cancel">Chọn lại</button>
+        <button class="button gold" value="confirm">Xác nhận đặt vé</button>
+      </form>
+    </dialog>
+    <dialog id="qr-dialog" class="modal" aria-labelledby="qr-title">
       <button class="close-modal" aria-label="Đóng">×</button>
       <p class="eyebrow">VÉ ĐIỆN TỬ</p>
-      <h2>Mã QR của bạn</h2>
+      <h2 id="qr-title">Mã QR của bạn</h2>
       <div id="qr-content"></div>
     </dialog>
   </body>
