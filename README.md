@@ -267,6 +267,59 @@ Test-Path .\cenima\.local\demo-auth.ps1
 
 File `cenima/.env.example` chỉ là ví dụ; Spring Boot **không tự động đọc** file `.env`.
 
+### 5.7. Đồng bộ danh mục phim NCC vào SQL Server (tùy chọn)
+
+Star Cinema có hai nguồn dữ liệu phim:
+
+- Giao diện giới thiệu phim sử dụng `cenima/src/main/resources/static/assets/ncc-catalog.json`.
+- Chức năng đặt vé sử dụng bảng `Movies` và `Showtimes` trong SQL Server thông qua API.
+
+Vì vậy, chỉ cập nhật `ncc-catalog.json` không tự động cập nhật
+danh sách phim có thể đặt vé trong database.
+
+Để tạo dữ liệu thống nhất cho môi trường demo, sử dụng:
+
+`database/sqlserver/09-sync-ncc-catalog-demo.sql`
+
+**Phạm vi:**
+
+- Chỉ chạy trên database `CINEMA_THAO_ETICKET_DEMO`.
+- Nhập 9 phim từ bản snapshot danh mục NCC ngày 04/11/2026.
+- Cập nhật thông tin các phim tương ứng nếu đã tồn tại.
+- Có tùy chọn ẩn các phim seed cũ bằng cách đổi `Status`.
+- Tạo suất chiếu giả lập trong tương lai để kiểm thử đặt vé.
+- Không xóa các bản ghi Booking hoặc Ticket đã có.
+
+**Cách thực hiện:**
+
+1. Sao lưu database demo trước khi thay đổi dữ liệu.
+2. Mở file SQL bằng VS Code (MSSQL extension) hoặc SSMS.
+3. Kết nối đến database `CINEMA_THAO_ETICKET_DEMO`.
+4. Giữ `@PreviewOnly = 1` và chạy toàn bộ script để xem trước.
+5. Kiểm tra danh sách phim, phòng và suất chiếu dự kiến.
+6. Đổi `@PreviewOnly = 0`, chạy lại toàn bộ script để lưu.
+7. Kiểm tra thông báo `COMMIT SUCCESS`.
+
+Nếu hiển thị `PREVIEW ONLY`, toàn bộ thay đổi đã được
+ROLLBACK và chưa được lưu vào database.
+
+**Lưu ý quan trọng:**
+
+- Đây là dữ liệu mẫu phục vụ học tập, không phải lịch chiếu thực tế của NCC.
+- Danh mục NCC là snapshot, không tự cập nhật theo thời gian thực.
+- Suất chiếu trong script được tạo cho ngày kế tiếp tại thời điểm chạy.
+- Sau khi suất chiếu hết hạn, cần bổ sung suất chiếu tương lai.
+- Script `tools/Sync-NccCatalog.ps1` chỉ cập nhật catalog JSON
+  và poster, không trực tiếp cập nhật bảng Movies trong SQL Server.
+- Việc `git pull` không tự động thực thi SQL hoặc đồng bộ database.
+
+Có thể dùng `tools/Add-DemoShowtimes.ps1 -Days 3` để bổ sung
+suất chiếu demo cho tối đa ba phim đang chiếu, sau khi đã
+kiểm tra đúng kết nối và sao lưu database.
+
+Không chạy các script dữ liệu demo trên database production.
+
+
 ## 6. Chạy lại dự án hằng ngày
 
 ### Cách nhanh nhất — đã setup DB và mật khẩu trước đó
@@ -324,24 +377,129 @@ Nhấn `Ctrl + C` ở Terminal đang chạy `java -jar`. Nếu cổng 8080 đã 
 
 ## 7. Hướng dẫn sử dụng website
 
-1. Mở `/cinema/index.html`, chọn phim.
-2. Chọn suất chiếu còn trong tương lai.
-3. Chọn ghế `AVAILABLE`, bấm **Tiếp tục đặt vé**.
-4. Đăng nhập bằng `customer@cinema.test` và mật khẩu demo nếu chưa có phiên.
-5. Xem lại ghế và bấm **Xác nhận đặt vé**.
-6. Backend tạo Booking và các Ticket; mỗi ghế tương ứng **một vé riêng**.
-7. Nhấn **Xem JWT & QR** trên một Ticket ID.
-8. Chọn thuật toán đang báo **Sẵn sàng**, bấm **Phát hành JWT + QR**.
-9. Để Verify/Check-in, mở `/demo/check-in.html` với danh tính **STAFF/ADMIN**.
-10. Nhấn **Verify · không dùng vé** trước; chỉ khi cần dùng vé thật mới nhấn **Check-in · dùng vé**.
 
-**Quy tắc nghiệp vụ hiện tại:**
+## 7. Hướng dẫn sử dụng Star Cinema
 
-- Frontend chỉ tính giá **ước lượng**; backend tự tính giá theo loại ghế STANDARD/VIP/COUPLE.
-- Chưa tích hợp thanh toán thật: đặt vé thành công thì Booking được ghi `PAID`, Ticket ban đầu `UNUSED`.
-- Không cho đặt ghế đã được người khác đặt; có cơ chế unique index/transaction phòng tranh chấp.
-- Verify kiểm tra tính hợp lệ nhưng **không đổi trạng thái vé**; Check-in hợp lệ chuyển từ `UNUSED` sang `USED`, không cho dùng lại.
-- JWT có hạn đến thời điểm kết thúc suất chiếu theo thời lượng phim; hệ thống có thể từ chối JWT hết hạn hoặc vé hủy/đã dùng.
+### 7.1. Các trang chính
+
+| Chức năng | Đường dẫn |
+|---|---|
+| Trang chủ Star Cinema | `http://localhost:8080/` |
+| Đăng nhập | `http://localhost:8080/login.html` |
+| Trang quản trị | `http://localhost:8080/admin.html` |
+| Xác minh / Check-in vé | `http://localhost:8080/check-in.html` |
+
+Website chạy bằng Spring Boot với profile `integrated`
+và sử dụng SQL Server làm nguồn dữ liệu đặt vé.
+
+### 7.2. Đặt vé và tạo mã QR (CUSTOMER)
+
+1. Đăng nhập bằng tài khoản CUSTOMER.
+2. Mở trang chủ Star Cinema.
+3. Chọn mục đặt vé và chọn bộ phim muốn xem.
+4. Chọn suất chiếu tương lai và ghế còn trống.
+5. Xác nhận đặt vé để tạo Booking và Ticket trong database.
+6. Mở mục **Vé của tôi**.
+7. Chọn **Xem vé / QR** trên vé cần kiểm tra.
+8. Hệ thống phát hành JWT vé điện tử và hiển thị QR.
+9. Nhấn **Tải mã QR** để lưu ảnh PNG về máy.
+
+Trên giao diện Star Cinema hiện tại, chức năng
+**Xem vé / QR** phát hành vé bằng thuật toán RS256.
+
+QR có thể chứa JWT đầy đủ hoặc mã tham chiếu bắt đầu bằng
+`etkt:` tùy theo dung lượng dữ liệu và cấu hình backend.
+
+Mỗi ghế được đặt tương ứng với một Ticket riêng.
+
+### 7.3. Đăng nhập nhân viên hoặc quản trị viên
+
+Tài khoản kiểm tra vé phải có vai trò STAFF hoặc ADMIN.
+
+| Vai trò | Email demo |
+|---|---|
+| STAFF | `staff@cinema.test` |
+| ADMIN | `admin@cinema.test` |
+
+Đăng nhập tại:
+
+`http://localhost:8080/login.html`
+
+Mật khẩu được thiết lập trong môi trường local của từng máy.
+Không ghi mật khẩu thật vào README hoặc commit lên GitHub.
+
+Sau khi đăng nhập, mở trang:
+
+`http://localhost:8080/check-in.html`
+
+**Lưu ý:** Tài khoản ADMIN có thể được điều hướng tự động
+đến `/admin.html` sau khi đăng nhập. Khi đó, nhập thủ công
+đường dẫn `/check-in.html` trên chính tab đã đăng nhập.
+
+Giao diện hiện tại sử dụng phiên đăng nhập để xác thực
+các API kiểm tra vé; không cần dán access token thủ công.
+
+### 7.4. Quét mã QR và xác minh vé
+
+Trang check-in hỗ trợ ba cách nhập mã vé:
+
+1. **Tải ảnh QR:** chọn file PNG đã tải từ Star Cinema.
+2. **Quét bằng camera:** bật camera và đưa mã QR vào khung quét.
+3. **Nhập thủ công:** dán JWT hoặc mã tham chiếu `etkt:`.
+
+Với chức năng tải ảnh QR, frontend sử dụng `FileReader`
+để đọc ảnh thành Data URL, sau đó giải mã bằng thư viện
+`qr-scanner`.
+
+Cách xử lý này tương thích với chính sách bảo mật CSP
+của Star Cinema, trong đó `img-src` cho phép `data:`
+nhưng không cho phép `blob:`.
+
+Sau khi đọc được QR, frontend gọi API:
+
+`POST /api/tickets/verify`
+
+Nếu thành công, hệ thống hiển thị thông tin vé gồm
+phim, suất chiếu, phòng, ghế và kết quả xác minh.
+
+**Verify chỉ xác minh vé, không thay đổi trạng thái sử dụng.**
+
+### 7.5. Check-in và chống sử dụng lại vé
+
+Sau khi Verify thành công, nhân viên kiểm tra thông tin
+và nhấn nút **Check-in**.
+
+Frontend gọi:
+
+`POST /api/tickets/check-in`
+
+Kết quả mong đợi:
+
+| Thao tác | Kết quả |
+|---|---|
+| Verify vé hợp lệ | Thành công, vé vẫn `UNUSED` |
+| Check-in lần đầu | Thành công, vé chuyển sang `USED` |
+| Check-in lại cùng vé | Bị từ chối vì vé đã được sử dụng |
+| Verify JWT bị sửa trái phép | Chữ ký không hợp lệ |
+| CUSTOMER thực hiện Check-in | Bị từ chối do thiếu quyền |
+
+Quét QR không đồng nghĩa với việc vé đã được sử dụng.
+Chỉ thao tác Check-in thành công mới đánh dấu vé là `USED`.
+
+### 7.6. Phạm vi kiểm thử
+
+Đã kiểm tra việc tải ảnh QR từ Star Cinema và khắc phục
+lỗi giải mã ảnh trong trình duyệt.
+
+Các trường hợp cần tiếp tục nghiệm thu độc lập:
+
+- Quét QR bằng camera trên thiết bị thật.
+- Kiểm tra chống check-in hai lần.
+- JWT hết hạn hoặc sai chữ ký.
+- Kiểm tra quyền CUSTOMER, STAFF, ADMIN.
+- Verify/Check-in với các thuật toán JWT khác khi được
+  tích hợp vào giao diện phát hành vé.
+
 
 ## 8. API chính
 
@@ -473,17 +631,31 @@ Lấy JWT đã ký → kiểm tra chữ ký → đối chiếu vé
 
 Giao diện vẫn có ô **JWT đầy đủ** để copy, trong khi QR chỉ chứa mã ngắn. Mã tham chiếu và JWT thuộc **cùng một vé**, đều bị từ chối sau khi check-in thành công hoặc hết hạn theo chính sách.
 
-### 9.5. Luồng kiểm tra của STAFF
 
-1. Mở trang vé CineVerse, phát hành JWT bằng `ML-DSA-44`, bấm **Sao chép JWT**.
-2. Mở `/demo/check-in.html`.
-3. Lấy access token đăng nhập **Staff** và dán vào mục **Danh tính khi tích hợp**.
-4. Dán JWT vào ô `JWT hoặc mã etkt`, bấm **Verify · không dùng vé**.
-5. Chỉ khi muốn sử dụng vé, bấm **Check-in · dùng vé**.
-6. Thử check-in lại **chính vé đó** để xác nhận chống dùng lại.
-7. Thử thay đổi payload JWT mà không ký lại: việc Verify phải thất bại.
+### 9.5. Luồng kiểm tra vé bằng STAFF/ADMIN
 
-`401 UNAUTHENTICATED` thường là thiếu/sai access token **Staff**; chưa đủ cơ sở kết luận ML-DSA sai. `403 FORBIDDEN` thường là tài khoản thiếu quyền. `422` có thể liên quan JWT/chữ ký, dữ liệu vé hoặc thời gian hết hạn; đọc mã lỗi chi tiết.
+Đối với giao diện Star Cinema đang sử dụng:
+
+1. CUSTOMER đặt vé và tải ảnh QR từ mục **Vé của tôi**.
+2. STAFF hoặc ADMIN đăng nhập tại `/login.html`.
+3. Mở `/check-in.html` trên tab đã đăng nhập.
+4. Tải ảnh QR, quét camera hoặc nhập JWT/mã `etkt:`.
+5. Hệ thống gọi `/api/tickets/verify` để xác minh.
+6. Nếu vé hợp lệ, nhân viên nhấn **Check-in**.
+7. Hệ thống gọi `/api/tickets/check-in` và cập nhật trạng thái.
+8. Thử check-in lại cùng vé để kiểm tra chống sử dụng lại.
+
+Cần phân biệt:
+
+- Access token: chứng minh danh tính và quyền STAFF/ADMIN.
+- JWT vé điện tử: chứa thông tin vé, được ký số.
+- QR tham chiếu `etkt:`: dùng để truy xuất JWT tương ứng.
+- Verify: kiểm tra mà không sử dụng vé.
+- Check-in: xác minh và đánh dấu vé đã được sử dụng.
+
+Frontend check-in sử dụng phiên đăng nhập hiện tại.
+Không nhập mật khẩu hoặc access token vào ô nội dung mã vé.
+
 
 ## 10. Test bằng Maven, PowerShell và Postman
 
