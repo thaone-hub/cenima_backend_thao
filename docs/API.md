@@ -84,4 +84,6 @@ POST `/api/auth/login` nhận `{email,password}`; trả `accessToken`, `refreshT
 
 Token auth: typ=JWT, alg=RS256, kid=rsa-key-1, iss=cenima-auth, tokenType=ACCESS hoặc REFRESH, sub=email. Token vé: typ=eticket+jwt, iss=cinema-ticket, aud=cinema-checkin. Filter access từ chối vé/refresh token; refresh từ chối vé. Giữ issuer/audience auth cũ.
 
-Integrated gửi `Authorization: Bearer <accessToken>` cho API vé/booking; ba thuật toán RS256, ES256, EdDSA available, ML-DSA-44 unavailable. GET algorithms cũng cần xác thực. Các ví dụ X-User-Id phía trên chỉ dành cho demo.
+Integrated gửi `Authorization: Bearer <accessToken>` cho API vé/booking; mặc định cả RS256, ES256, EdDSA và ML-DSA-44 available. Tắt `CINEMA_MLDSA_ENABLED` sẽ làm ML-DSA-44 unavailable/503. GET algorithms cũng cần xác thực. Các ví dụ X-User-Id phía trên chỉ dành cho demo.
+
+Giao diện lấy danh sách thuật toán từ API rồi đợi người dùng chọn và bấm phát hành; mỗi yêu cầu token chỉ dùng một thuật toán và trả một QR. Đổi thuật toán không thu hồi JWT cũ, không gia hạn vé và không tạo thêm quyền check-in. ML-DSA có thể trả `qr.mode=REFERENCE`: QR chứa mã `etkt:…`, còn trường `token` vẫn là JWT đã ký. Cấu trúc API không đổi; access JWT đăng nhập vẫn dùng RS256.

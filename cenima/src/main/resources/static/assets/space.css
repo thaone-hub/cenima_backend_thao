@@ -2889,3 +2889,13 @@ body {
   .carousel-previous { left: 8px; }
   .carousel-next { right: 8px; }
 }
+
+/* Ticket algorithm selection and a single issued QR. */
+.qr-issue-form { display: grid; gap: 12px; text-align: left; }
+.qr-issue-form select { width: 100%; min-height: 50px; }
+.qr-status { line-height: 1.7; overflow-wrap: anywhere; }
+.qr-result { margin-top: 24px; }
+.qr-result .qr-note { white-space: pre-line; }
+.qr-token-details { margin-top: 24px; text-align: left; }
+.qr-token-details summary { cursor: pointer; padding: 10px 0; }
+.qr-token-details textarea { width: 100%; margin: 12px 0; font-family: monospace; font-size: 13px; resize: vertical; overflow-wrap: anywhere; }

@@ -47,10 +47,16 @@ async function scene({ guest = false, conflict = false, noShowtimes = false } = 
         if (conflict) { taken = true; throw Object.assign(new Error('Seat conflict'), { status: 409 }); }
         booked = true; return { totalPrice: 100000, tickets: [ticket] };
       }
-      if (path === '/api/tickets/91/token') return { ticket, algorithm: 'RS256', qr: { pngBase64: 'aW1hZ2U=' } };
+      if (path === '/api/tickets/91') return ticket;
+      if (path === '/api/tickets/algorithms') return ['RS256', 'ES256', 'EdDSA', 'ML-DSA-44']
+        .map((algorithm) => ({ algorithm, available: true }));
+      if (path === '/api/tickets/91/token') return { ticket, algorithm: options.body.algorithm,
+        token: 'signed.ticket.token', expiresAt: '2099-01-02T14:30:00Z',
+        qr: { mode: 'JWT', pngBase64: 'aW1hZ2U=' } };
       throw new Error(`Unexpected request: ${path}`);
     },
   };
+  w.eval(readFileSync(join(root, 'assets/ticket-qr.js'), 'utf8'));
   await w.eval(readFileSync(join(root, 'assets/home.js'), 'utf8'));
   await flush();
   const el = (id) => w.document.getElementById(id);
@@ -91,9 +97,13 @@ test('My tickets books a local film only after confirmation, refreshes on the sa
     assert.ok(s.calls.filter((c) => c.path === '/api/account/tickets').length >= 2);
     s.w.document.querySelector('[data-qr="91"]').click(); await flush();
     assert.equal(s.el('qr-dialog').open, true);
-    assert.match(s.el('qr-content').textContent, /RS256/);
+    assert.ok(!s.calls.some((c) => c.path === '/api/tickets/91/token'));
+    s.el('qr-algorithm').value = 'ES256';
+    s.el('qr-algorithm').dispatchEvent(new s.w.Event('change'));
+    s.el('qr-issue').click(); await flush();
+    assert.match(s.el('qr-result').textContent, /ES256/);
     assert.equal(s.w.document.querySelector('#qr-content a').download, 'star-cinema-ticket-91.png');
-    assert.equal(s.calls.find((c) => c.path === '/api/tickets/91/token').options.body.algorithm, 'RS256');
+    assert.equal(s.calls.find((c) => c.path === '/api/tickets/91/token').options.body.algorithm, 'ES256');
   } finally { s.close(); }
 });
 

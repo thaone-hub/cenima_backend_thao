@@ -1,5 +1,16 @@
 # Kết quả kiểm thử tích hợp
 
+## Cập nhật local ngày 11/11/2026: chọn thuật toán và QR
+
+- **58 kiểm thử Java đạt, 0 lỗi, 0 bỏ qua**, gồm SQL Server test riêng, bốn thuật toán, lưu/nạp khóa qua restart JVM, QR tham chiếu ML-DSA và check-in chéo RS256/ML-DSA chỉ có một lượt thành công.
+- **11 kiểm thử giao diện đạt**: giữ luồng đặt vé/xác nhận/xung đột ghế; mở QR chưa phát hành, chọn từng thuật toán, đổi lựa chọn ẩn kết quả, provider không khả dụng, retry và phản hồi đến chậm.
+- Kiểm thử ML-DSA dùng chữ ký thật; ZXing đọc lại PNG tham chiếu. Khóa hỏng/thiếu/không khớp bị từ chối; profile demo hoặc cấu hình tắt không tạo khóa ML-DSA.
+- Lượt `verify` đã chạy đủ 58 test nhưng bước repackage bị khóa bởi JAR đang chạy. Sau khi dừng đúng tiến trình portal local, `package -DskipTests` đạt **BUILD SUCCESS** trên cùng mã nguồn đã kiểm thử. Dừng web trước khi đóng gói lại trên Windows.
+- Web integrated khởi động lại thành công: `/` và `/assets/ticket-qr.js` trả HTTP 200; API xác thực trả cả bốn thuật toán `available=true`. Không tạo suất chiếu hoặc đặt vé thử trên DB demo. Chưa kiểm tra thủ công layout/clipboard/camera trong trình duyệt ở lần cập nhật này.
+- Báo cáo Java: `cenima/target/surefire-reports`; log giao diện: `cenima/.local/verify-ticket-qr-ui.log`. Chạy UI bằng `node --test tools/test-ticket-ui.cjs tools/test-ticket-qr.cjs` với `NODE_PATH` như README. Chưa chạy lại smoke/migration; các kết quả dưới đây thuộc lần nghiệm thu cũ.
+
+## Lịch sử nghiệm thu
+
 Ngày nghiệm thu: **26/10/2026, giờ Việt Nam**. Java 21, Spring Boot 4.1.2, Windows, Maven Wrapper và SQL Server local. Không dùng H2/MySQL. Module Maven: `cenima/`.
 
 ## Kết quả
@@ -70,5 +81,5 @@ Chỉ đặt `TEST_DB_*` cho `CINEMA_THAO_ETICKET_TEST`. Không trỏ test sang 
 ## Chưa nghiệm thu / dependency còn thiếu
 
 - **Browser/camera/ảnh/clipboard/layout/responsive:** runtime báo `No browser is available`. HTTP và ZXing round-trip không chứng minh camera/ảnh hoạt động trong browser. Dùng checklist [CAMERA.md](CAMERA.md) trên thiết bị thật.
-- **ML-DSA-44:** thiếu provider thật Hương; unavailable/503 đã được kiểm tra. Chưa có benchmark hoặc kiểm tra QR ML-DSA thực tế.
+- **Benchmark ML-DSA-44:** chưa nghiệm thu số liệu hiệu năng. Provider thật đã được tích hợp từ Hương; kiểm thử bổ sung bao gồm ký/xác minh, payload/header/chữ ký sai, khóa không khớp, lưu/nạp khóa, QR tham chiếu và trạng thái vé dùng chung. Các kết quả trong bảng ngày 26/10 phía trên là kết quả lịch sử trước lần tích hợp này.
 - **Mobile/LAN HTTPS, nhiều instance, kho khóa dùng chung, key rotation:** chưa nghiệm thu triển khai. Cần chứng thư tin cậy và quản lý khóa ngoài Git.

@@ -103,6 +103,13 @@
             <version>1.24.0</version>
         </dependency>
 
+        <!-- ML-DSA-44 ticket signatures (Hương's provider, source_muoi aa21e78). -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.83</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

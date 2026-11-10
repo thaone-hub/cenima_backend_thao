@@ -35,7 +35,7 @@ Giữ contract Ngọc: `JwtSigner.algorithm/sign(Map)`, `JwtVerifier.algorithm/v
 | RS256 | Rs256JwtSigner, Nimbus RSASSASigner/RSASSAVerifier. |
 | ES256 | Es256JwtSigner, Nimbus ECDSASigner/ECDSAVerifier, P-256. |
 | EdDSA | EdDsaJwtSigner, Nimbus Ed25519Signer/Verifier + Tink. |
-| ML-DSA-44 | Chưa có provider; unavailable, phát hành trả 503. |
+| ML-DSA-44 | MlDsaJwtSigner/Verifier của Hương (`aa21e78`), Bouncy Castle 1.83; bật mặc định trong integrated. |
 
 Các provider Thảo giữ `getAlgorithm`, `sign(JWTClaimsSet)`, `verify`. Overload mới `(JWTClaimsSet, JOSEObjectType)` cho phép vé dùng typ=eticket+jwt; hàm sign cũ vẫn typ=JWT cho auth/benchmark/test. Nimbus/Tink thực hiện mật mã, không có thuật toán tự viết hoặc signer thành công giả.
 
@@ -57,6 +57,7 @@ Access/refresh bị ticket pipeline từ chối; e-ticket bị access filter và
 
 - `demo & !integrated`: JJWT RS256, DemoActorProvider, DemoSecurityConfig, DemoAccountsController; auth runtime Thảo tắt.
 - `integrated`: auth Thảo, bridge và ba adapter Nimbus thật; mọi adapter demo tắt kể cả khi bật hai profile.
+- ML-DSA dùng provider riêng theo contract vé, tích hợp chọn lọc từ Hương; không nhập giao diện hoặc SecurityConfig từ nhánh khác. Khóa `.local/keys/integrated/mldsa44` được lưu qua restart và kiểm tra khớp cặp khi nạp. Có thể đổi bằng `CINEMA_MLDSA_KEY_DIR`, tắt bằng `CINEMA_MLDSA_ENABLED=false`; không tắt khi còn vé ML-DSA cần xác minh.
 - Không chọn profile sẽ thiếu actor provider và fail startup, không fallback.
 
 Runtime dùng `KeyManager(Path)`, lưu/nạp private JWK set tại `.local/keys/integrated/traditional.jwk`, file lock và atomic move. No-arg KeyManager giữ sinh khóa tạm cho test/benchmark gốc. Không có khóa trong classpath; khóa hỏng/thiếu thành phần làm fail startup thay vì thay khóa. Giữ cùng directory qua restart; nhiều instance cần kho khóa dùng chung được quản lý riêng. Dùng `TRADITIONAL_KEY_DIRECTORY` tuyệt đối khi thay working directory. File khóa/credential bị `.gitignore` loại trừ.
@@ -71,4 +72,4 @@ Bản sao schema cũ tạo từ DDL/seed đúng origin/main, thêm refresh cũ �
 
 ## Ghép tiếp Trang và Hương
 
-Trang gọi provider/adapter trực tiếp với payload cố định, tách tạo/nạp khóa, DB, QR và HTTP khỏi benchmark mật mã. Hương thêm provider thật theo contract và đăng ký signer/verifier tên wire `ML-DSA-44`, không đổi nghiệp vụ vé/check-in. Chỉ công bố available sau test thật. Check-in chéo RS256/ES256 và replay JWT/reference chéo EdDSA/RS256 đã chạy trên SQL Server.
+Trang gọi provider/adapter trực tiếp với payload cố định, tách tạo/nạp khóa, DB, QR và HTTP khỏi benchmark mật mã. ML-DSA của Hương đã được đăng ký signer/verifier tên wire `ML-DSA-44`, không đổi nghiệp vụ vé/check-in. Không sử dụng QR mẫu/chữ ký giả từ giao diện benchmark. Kết quả kiểm tra provider, QR tham chiếu, kiểm tra chéo thuật toán và restart được ghi tại [TESTING.md](TESTING.md).

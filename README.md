@@ -37,9 +37,13 @@ Sau khi đã cấu hình database và build lần đầu, chạy từ thư mục
 
 ```powershell
 ./tools/Start-Portal.ps1
-# Khi vừa sửa code, dừng tiến trình cũ bằng Ctrl+C rồi build/chạy lại:
-# ./tools/Start-Portal.ps1 -Build
+# Khởi động lại bản đang chạy từ đúng workspace này:
+# ./tools/Start-Portal.ps1 -Restart
+# Khi vừa sửa code, dừng bản đang chạy, build và khởi động lại:
+# ./tools/Start-Portal.ps1 -Build -Restart
 ```
+
+Nếu chạy lệnh lần nữa khi web đã hoạt động, script chỉ báo địa chỉ để mở, không tạo thêm server. `-Restart` chỉ dừng tiến trình dùng đúng JAR của workspace này; khi build cần dừng mọi bản đang dùng cùng JAR để tránh Windows khóa file. Nếu cổng bị ứng dụng khác chiếm, script báo lỗi và không dừng ứng dụng đó; chọn cổng trống bằng `-Port 8081`. Giữ terminal mở khi web đang chạy; nhấn `Ctrl+C` để dừng.
 
 Mở http://127.0.0.1:8080/login.html, nhập tài khoản **`admin123@`** và mật khẩu đã thiết lập. Đăng nhập bằng ADMIN tự chuyển sang http://127.0.0.1:8080/admin.html. Cũng có thể mở thẳng `/admin.html` rồi bấm “Đăng nhập”. Nếu đang dùng tài khoản USER, đăng xuất trước.
 
@@ -68,7 +72,8 @@ Chức năng đặt vé và phát hành JWT đã có trong backend; giao diện 
 2. Trong **Đặt vé mới**, chọn phim tại Star Cinema và bấm **Chọn suất chiếu**.
 3. Chọn suất chiếu còn ở tương lai, chọn các ghế còn trống. Giá STANDARD/VIP/COUPLE được hiển thị; backend tự tính và kiểm tra lại giá, ghế khi đặt.
 4. Bấm **Kiểm tra và xác nhận**, kiểm tra phim, ngày/giờ, phòng, ghế, tổng tiền rồi **Xác nhận đặt vé**. Bấm “Chọn lại” sẽ không tạo đơn.
-5. Vé mới hiện ngay trong **Vé đã đặt**. Bấm **Xem vé / QR** để phát hành và xem QR, hoặc **Tải mã QR** để lưu ảnh. STAFF/ADMIN dùng trang `/check-in.html` để xác minh và check-in.
+5. Vé mới hiện ngay trong **Vé đã đặt**. Bấm **Xem vé / QR**, chọn **RS256 / ES256 / EdDSA / ML-DSA-44**, sau đó bấm **Phát hành QR**. Mở hộp thoại chưa phát hành vé; thuật toán chưa khả dụng bị vô hiệu hóa.
+6. Mỗi lần chỉ hiện **một QR**. Đổi thuật toán sẽ ẩn QR cũ; bấm **Phát hành QR** lần nữa để xem mã theo lựa chọn mới. Có thể tải ảnh QR, xem/sao chép JWT và hạn vé. STAFF/ADMIN dùng trang `/check-in.html` để xác minh và check-in.
 
 Danh sách để đặt vé lấy từ SQL Server (`/api/movies?status=1` và `status=2`), không lấy ID phim `ncc-*` của danh mục tham khảo trên trang chủ. Nếu phim chưa có suất chiếu tương lai trong bảng `Showtimes`, giao diện báo chưa có lịch; cần có phim, phòng, ghế và suất chiếu hợp lệ trong database mới đặt được. Giao diện không tự tạo suất chiếu hoặc sửa ngày seed cũ. Chưa tích hợp thanh toán thật; backend hiện đánh dấu đơn đặt thành công là `PAID`.
 
@@ -82,14 +87,14 @@ Script chỉ thêm lịch vào `CINEMA_THAO_ETICKET_DEMO`: tối đa ba phim đa
 
 API dùng trong luồng này: `GET /api/movies/{id}/showtimes`, `GET /api/showtimes/{id}/seats`, `POST /api/bookings`, `GET /api/account/tickets`, `POST /api/tickets/{id}/token`. Access JWT xác thực người đặt; server lấy chủ vé từ phiên đăng nhập, chống trùng ghế bằng ràng buộc SQL. Trùng ghế trả 409 và giao diện tải lại sơ đồ để chọn lại.
 
-QR mặc định dùng **JWT ký số RS256**, không phải mã hóa giấu nội dung. Backend cũng đã có ES256/EdDSA; lần tích hợp giao diện này không thay thuật toán. Chỉ chủ vé hoặc ADMIN được phát hành QR. JWT vé có thời hạn, phân biệt với access token; mỗi vé chỉ check-in một lần. QR quá dài sẽ dùng mã tham chiếu theo cơ chế backend hiện có.
+QR dùng **JWT ký số theo thuật toán đã chọn**, không phải mã hóa giấu nội dung. Danh sách thuật toán lấy từ backend; không tự đổi về RS256 khi phát hành lỗi. Chỉ chủ vé hoặc ADMIN được phát hành QR. JWT vé có thời hạn, phân biệt với access token; mỗi vé chỉ check-in một lần dù đã phát hành nhiều QR bằng các thuật toán khác nhau. Đổi lựa chọn chỉ ẩn QR cũ trên giao diện, không thu hồi JWT đã phát hành. QR quá dài, thường gặp với ML-DSA, sẽ chứa mã tham chiếu `etkt:…` đến JWT trong database.
 
 Kiểm thử riêng giao diện bằng Node.js và jsdom (cài trong thư mục local được Git bỏ qua):
 
 ```powershell
 npm install --prefix cenima/.local/ui-tests --no-audit --no-fund jsdom@26
 $env:NODE_PATH = (Resolve-Path cenima/.local/ui-tests/node_modules).Path
-node --test tools/test-ticket-ui.cjs
+node --test tools/test-ticket-ui.cjs tools/test-ticket-qr.cjs
 ```
 
 Auth giữ nguyên POST `/api/auth/login` với `{email,password}`, POST `/api/auth/refresh` và `/api/auth/logout` với `{refreshToken}`. Login/refresh trả `accessToken`, `refreshToken`, `tokenType`, `expiresIn`; logout trả 204. Token auth RS256 vẫn có `typ=JWT`, `iss=cenima-auth`, `tokenType=ACCESS/REFRESH`.
@@ -105,13 +110,17 @@ $login=Invoke-RestMethod "$base/api/auth/login" -Method Post -ContentType applic
 
 Giao diện tự gửi access token sau khi đăng nhập; người dùng xem vé tại “Vé của tôi”, STAFF/ADMIN mở [check-in](http://127.0.0.1:8080/check-in.html). CUSTOMER sở hữu vé hoặc ADMIN phát hành; STAFF/ADMIN verify/check-in. Seed gốc có `customer@cinema.test`, `staff@cinema.test`, `admin@cinema.test`; script thiết lập admin đổi tài khoản cuối thành `admin123@`. Lấy ID vé thực tế từ seed/DB, không mặc định ID trên DB đã có dữ liệu.
 
-Integrated bật **RS256, ES256, EdDSA thật** qua Nimbus/Tink của Thảo; ML-DSA-44 chưa có provider, báo unavailable/503. Vé dùng `typ=eticket+jwt`, `iss=cinema-ticket`, `aud=cinema-checkin`; không thể dùng làm access/refresh token. `X-User-Id` bị bỏ qua trong integrated, kể cả booking.
+Integrated bật **RS256, ES256, EdDSA thật** qua Nimbus/Tink của Thảo và **ML-DSA-44 thật** qua Bouncy Castle 1.83. Provider ML-DSA được tích hợp chọn lọc từ đóng góp của Hương (`mynameismuoiii`, commit `aa21e78`), bổ sung kiểm tra cặp khóa khi nạp. Vé dùng `typ=eticket+jwt`, `iss=cinema-ticket`, `aud=cinema-checkin`; không thể dùng làm access/refresh token. JWT đăng nhập vẫn dùng RS256. `X-User-Id` bị bỏ qua trong integrated, kể cả booking.
 
 Profile `demo` vẫn chạy độc lập bằng JJWT RS256 và `X-User-Id` lấy role từ DB; auth runtime Thảo tắt. Profile `integrated` tắt toàn bộ adapter demo, kể cả khi cùng bật `demo,integrated`. Luôn chọn profile rõ ràng; không có fallback.
 
 ## Khóa, thời hạn và QR
 
 Integrated sinh/nạp private JWK set tại `cenima/.local/keys/integrated/traditional.jwk`; giữ khóa RSA/EC/Ed25519 và `kid` qua restart. Dùng `TRADITIONAL_KEY_DIRECTORY` là đường dẫn tuyệt đối nếu chạy từ nơi khác. Khóa hỏng làm startup thất bại, không tự thay khóa. Không xóa khóa khi restart.
+
+ML-DSA bật mặc định trong profile `integrated`, lưu riêng `private.pk8` và `public.x509` tại `cenima/.local/keys/integrated/mldsa44/` khi chạy bằng `Start-Portal.ps1`. Có thể đặt `CINEMA_MLDSA_KEY_DIR` thành thư mục tuyệt đối khác trước khi chạy. Khóa thiếu một nửa, hỏng hoặc không khớp làm startup thất bại, không được tự thay bằng cặp mới. Giữ và sao lưu khóa ngoài Git; trên Windows, giới hạn ACL thư mục khóa cho tài khoản chạy ứng dụng.
+
+Để chạy không có ML-DSA, đặt `$env:CINEMA_MLDSA_ENABLED='false'` trước khi khởi động: lựa chọn ML-DSA bị vô hiệu hóa và API phát hành trả 503. **Không tắt/gỡ provider hoặc xóa khóa khi còn vé ML-DSA chưa hết hạn**, vì các vé đã phát hành cũng cần provider/khóa để xác minh. Nếu cần hoàn tác giao diện, giữ backend ML-DSA cho đến khi các vé đó hết hạn.
 
 Vé lấy dữ liệu từ DB; `exp = startTime + movie.duration` theo `Asia/Ho_Chi_Minh`, phát hành lại không gia hạn. Verify không dùng vé. Check-in khóa hàng Ticket trong transaction, chỉ một lần chuyển UNUSED → USED dù có nhiều JWT/thuật toán. QR tự chuyển sang tham chiếu SQL Server nếu vượt version tối đa; thử nhánh này bằng `--ticket.qr-max-version=5`.
 
@@ -142,11 +151,11 @@ JUnit chỉ bật test SQL khi `TEST_DB_URL` trỏ `CINEMA_THAO_ETICKET_TEST`. T
 
 [Ghép module và 9 file chung](docs/INTEGRATION.md) · [API](docs/API.md) · [Thiết kế](docs/DESIGN.md) · [Test](docs/TESTING.md) · [Camera/HTTPS](docs/CAMERA.md) · [Thư viện](docs/THIRD_PARTY.md).
 
-Nhánh chứa toàn bộ cập nhật giao diện Star Cinema, quản trị và đặt vé/QR: `feat/ngoc-eticket`.
+Nhánh chứa toàn bộ cập nhật giao diện Star Cinema, quản trị, đặt vé, chọn bốn thuật toán ký QR và script khởi động lại: `bo_may_dang_cap` (tiếp nối `feat/ngoc-eticket`).
 
 Clone đúng nhánh này trên máy mới:
 
 ```powershell
-git clone --branch feat/ngoc-eticket https://github.com/thaone-hub/cenima_backend_thao.git Cinema
+git clone --branch bo_may_dang_cap https://github.com/thaone-hub/cenima_backend_thao.git Cinema
 cd Cinema
 ```
