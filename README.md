@@ -1,920 +1,655 @@
-# CineVerse — Website đặt vé xem phim, E-Ticket JWT & QR
+# Star Cinema — Hệ thống đặt vé và xác thực vé điện tử bằng chữ ký số
 
-> **Dự án Java Spring Boot + Microsoft SQL Server** — đăng nhập, chọn phim/suất chiếu/ghế, đặt vé, phát hành và xác minh vé điện tử sử dụng JWT; nghiên cứu so sánh **RS256, ES256, EdDSA và ML-DSA-44 (Post-Quantum)**.
+> **Dự án môn Cơ sở an toàn thông tin**
 >
-> **Ngày cập nhật:** 27/10/2026 · **Phạm vi:** môi trường demo/local, không phải hệ thống bán vé thương mại.
+> Hệ thống đặt vé xem phim trực tuyến tích hợp JWT, chữ ký số, mã QR và kiểm soát check-in. Dự án được sử dụng để nghiên cứu, so sánh chữ ký số truyền thống (RS256, ES256, EdDSA) với chữ ký số hậu lượng tử ML-DSA-44 và làm nền tảng phát triển mô hình Hybrid.
 
-## Mục lục
+**Công nghệ:** Java 21 · Spring Boot 4.1.2 · Microsoft SQL Server · Spring Security · JWT/JWS · Bouncy Castle · ZXing
 
-1. [Giới thiệu và trạng thái](#1-giới-thiệu-và-trạng-thái)
-2. [Công nghệ và kiến trúc](#2-công-nghệ-và-kiến-trúc)
-3. [Cấu trúc source](#3-cấu-trúc-source)
-4. [Chuẩn bị môi trường](#4-chuẩn-bị-môi-trường)
-5. [Cài đặt lần đầu](#5-cài-đặt-lần-đầu)
-6. [Chạy lại dự án hằng ngày](#6-chạy-lại-dự-án-hằng-ngày)
-7. [Hướng dẫn sử dụng website](#7-hướng-dẫn-sử-dụng-website)
-8. [API chính](#8-api-chính)
-9. [JWT, ML-DSA-44 và QR](#9-jwt-ml-dsa-44-và-qr)
-10. [Test bằng Maven, PowerShell và Postman](#10-test-bằng-maven-powershell-và-postman)
-11. [Các lệnh Git](#11-các-lệnh-git)
-12. [Lỗi thường gặp](#12-lỗi-thường-gặp)
-13. [Bảo mật và giới hạn](#13-bảo-mật-và-giới-hạn)
-14. [Tài liệu liên quan](#14-tài-liệu-liên-quan)
+**Phạm vi:** Môi trường học tập và thực nghiệm, chưa phải hệ thống thương mại.
 
 ---
 
-## 1. Giới thiệu và trạng thái
+## 1. Giới thiệu dự án
 
-**CineVerse** là hệ thống đặt vé xem phim, gồm:
+Star Cinema mô phỏng quá trình đặt vé và kiểm soát vé tại rạp chiếu phim, từ việc lựa chọn phim, suất chiếu và ghế ngồi đến phát hành vé điện tử và xác nhận sử dụng vé.
 
-- **Khách hàng (CUSTOMER):** đăng nhập; duyệt phim, chọn suất chiếu và ghế; tạo booking; xem từng vé; phát hành JWT và QR.
-- **Nhân viên (STAFF):** đọc QR/JWT hoặc mã tham chiếu; Verify (chỉ kiểm tra) và Check-in (đánh dấu vé đã sử dụng).
-- **Quản trị viên (ADMIN):** có quyền liên quan đến vé và check-in theo cấu hình backend.
-- **Nghiên cứu JWT:** so sánh chữ ký truyền thống với **ML-DSA-44**, thuật toán chữ ký hậu lượng tử.
+Bên cạnh nghiệp vụ đặt vé, hệ thống tích hợp cơ chế xác thực người dùng, phân quyền theo vai trò và chữ ký số nhằm nghiên cứu các giải pháp bảo vệ tính toàn vẹn, tính xác thực của vé điện tử.
 
-**Trạng thái đã ghi nhận qua việc chạy trên máy nhóm:**
+### 1.1. Chức năng chính
 
-| Hạng mục | Trạng thái |
+| Vai trò | Chức năng |
 |---|---|
-| Maven `clean compile` với 89 Java source | Đã báo `BUILD SUCCESS` |
-| Giao diện CineVerse đăng nhập | Đã mở được |
-| Chọn phim → suất chiếu → ghế → đặt vé | Đã đặt vé thành công |
-| `ML-DSA-44` trên trang E-Ticket | Đã hiện **Sẵn sàng**, tạo JWT và QR thành công |
-| QR dạng mã tham chiếu | Đã hiển thị trên giao diện |
-| Verify/Check-in bằng STAFF sau khi nhập access token | **Cần xác nhận kết quả cuối cùng**; trước đó đã gặp 401 khi chưa có danh tính Staff |
-| Cổng thanh toán thật / triển khai production | Chưa có / chưa nghiệm thu |
+| CUSTOMER | Xem phim, chọn suất chiếu, đặt ghế, xem vé và lấy mã QR |
+| STAFF | Quét QR, xác minh vé, thực hiện check-in |
+| ADMIN | Quản lý tài khoản, phim, xem thống kê và kiểm tra vé |
 
-**Lưu ý:** `BUILD SUCCESS` và phát hành JWT không tự chứng minh toàn bộ nhánh verify/check-in ML-DSA đã hoàn thành. Cần chạy tiếp các trường hợp ở phần [kiểm thử](#10-test-bằng-maven-powershell-và-postman).
+Hệ thống hỗ trợ phân biệt giữa việc **Verify** (xác minh vé) và **Check-in** (đánh dấu vé đã sử dụng).
 
-## 2. Công nghệ và kiến trúc
+### 1.2. Các thuật toán chữ ký số
+
+| Thuật toán | Nhóm | Mục đích |
+|---|---|---|
+| RS256 | RSA + SHA-256 | Chữ ký số truyền thống |
+| ES256 | ECDSA P-256 + SHA-256 | Chữ ký số truyền thống |
+| EdDSA | Ed25519 | Chữ ký số truyền thống |
+| ML-DSA-44 | Chữ ký số hậu lượng tử | Nghiên cứu khả năng bảo vệ hậu lượng tử |
+
+Các thuật toán được tích hợp vào pipeline phát hành và xác minh vé điện tử thông qua các thành phần Signer và Verifier tương ứng.
+
+**Lưu ý về phạm vi:** Việc hệ thống hỗ trợ lựa chọn từng thuật toán không đồng nghĩa với việc đã triển khai Hybrid. Mô hình Hybrid yêu cầu bảo vệ cùng dữ liệu bằng hai chữ ký và áp dụng chính sách xác minh bắt buộc cả hai.
+
+---
+
+## 2. Công nghệ sử dụng
 
 | Thành phần | Công nghệ |
 |---|---|
-| Frontend website | HTML5, CSS3, JavaScript ES Modules; Spring Boot static resources |
-| Backend | Java **21** (mức biên dịch), Spring Boot **4.1.2**, REST API |
-| Bảo mật | Spring Security, Bearer JWT, BCrypt |
-| Cơ sở dữ liệu | Microsoft SQL Server, Spring Data JPA/Hibernate |
-| Build | Maven Wrapper `mvnw.cmd` |
-| JWT truyền thống | Nimbus JOSE + JWT, Tink, JJWT (demo) |
-| JWT hậu lượng tử | Bouncy Castle; `ML-DSA-44` do module Hương bổ sung |
-| QR | ZXing; quét QR trong giao diện nhân viên |
-| Test | JUnit / Spring Boot Test, Maven Surefire, các script PowerShell |
-| Công cụ phát triển | VS Code, SQL Server/SSMS, Postman, Git/GitHub |
+| Backend | Java, Spring Boot, REST API |
+| Frontend | HTML, CSS, JavaScript |
+| Database | Microsoft SQL Server |
+| ORM | Spring Data JPA, Hibernate |
+| Xác thực | Spring Security, JWT |
+| Mật khẩu | BCrypt |
+| JWT/JWS truyền thống | Nimbus JOSE + JWT, Tink, JJWT |
+| Chữ ký hậu lượng tử | Bouncy Castle |
+| Mã QR | ZXing và thư viện quét QR trên frontend |
+| Kiểm thử | JUnit 5, Maven |
+| Công cụ phát triển | VS Code, Git, SQL Server, Postman |
 
-### Sơ đồ luồng
+---
 
-```text
-Browser / CineVerse (/cinema/)
-    │
-    ├── Đăng nhập ─────────── POST /api/auth/login
-    │                          └── Access token RS256 (Thảo)
-    │
-    ├── Phim/suất/ghế ───── GET /api/movies, .../showtimes, .../seats
-    │
-    └── Đặt vé ───────────── POST /api/bookings
-                               └── SQL Server: Booking PAID + Ticket UNUSED
-                                        │
-                                        ▼
-                          POST /api/tickets/{ticketId}/token
-                                        │
-                    ┌───────────────────┼────────────────────┐
-                    ▼                   ▼                    ▼
-                  RS256             ES256 / EdDSA         ML-DSA-44
-                                                          
-                    └───────────────────┼────────────────────┘
-                                        ▼
-                                JWT đã ký + QR
-                                        │
-                                /demo/check-in.html
-                                        │
-                           STAFF/ADMIN đăng nhập
-                                        │
-                     Verify (không dùng vé) / Check-in
-                                        │
-                              Ticket UNUSED → USED
-```
+## 3. Kiến trúc hệ thống
 
-### Phân biệt 2 loại JWT
-
-1. **JWT đăng nhập:** được hệ thống Authentication cấp, dùng trong HTTP header `Authorization: Bearer <accessToken>`; thuật toán RS256.
-2. **JWT vé:** có `typ=eticket+jwt`, `iss=cinema-ticket`, `aud=cinema-checkin`; ký bằng thuật toán E-Ticket đã chọn. **Không dùng JWT vé để đăng nhập.**
-
-## 3. Cấu trúc source
+### 3.1. Quy trình đặt vé và phát hành QR
 
 ```text
-cenima_backend_moi/                   # Root repository
-├── README.md                          # File này
-├── .gitignore                          # Bỏ qua credential, khóa, target
-├── cenima/                             # Module Maven chính
-│   ├── pom.xml
-│   ├── mvnw.cmd                        # Maven Wrapper trên Windows
-│   ├── .env.example                    # Mẫu biến môi trường (KHÔNG tự nạp)
-│   ├── .local/                         # Sinh khi setup, KHÔNG commit
-│   │   ├── env.ps1                     # Biến môi trường kết nối SQL
-│   │   ├── demo-auth.ps1               # Mật khẩu demo
-│   │   └── keys/                       # Khóa JWT truyền thống
-│   └── src/
-│       ├── main/
-│       │   ├── java/com/backend/cenima/
-│       │   │   ├── Controller/         # Auth, Movie, Booking, Ticket APIs
-│       │   │   ├── DTO/                # Request/Response
-│       │   │   ├── Entity/             # Ánh xạ bảng SQL
-│       │   │   ├── Repository/         # Truy vấn DB
-│       │   │   ├── Service/            # Nghiệp vụ
-│       │   │   ├── Security/
-│       │   │   │   ├── auth/           # Login, SecurityConfig, JWT filter
-│       │   │   │   ├── contract/       # Interface JwtSigner/JwtVerifier
-│       │   │   │   ├── adapter/        # JwtProviderRegistry, bridge
-│       │   │   │   ├── traditional/    # RS256, ES256, EdDSA
-│       │   │   │   ├── pq/             # ML-DSA-44 (phần bổ sung)
-│       │   │   │   └── demo/           # Provider riêng cho demo
-│       │   │   └── config/             # Ticket config, MlDsaTicketConfig
-│       │   └── resources/
-│       │       ├── application.properties
-│       │       ├── application-integrated.properties
-│       │       ├── application-demo.properties
-│       │       └── static/
-│       │           ├── cinema/         # Frontend CineVerse (14 file bổ sung)
-│       │           │   ├── index.html
-│       │           │   ├── login.html
-│       │           │   ├── showtimes.html
-│       │           │   ├── seats.html
-│       │           │   ├── booking.html
-│       │           │   ├── ticket.html
-│       │           │   ├── css/style.css
-│       │           │   └── js/
-│       │           │       ├── api.js
-│       │           │       ├── auth.js
-│       │           │       ├── movies.js
-│       │           │       ├── showtimes.js
-│       │           │       ├── seats.js
-│       │           │       ├── booking.js
-│       │           │       └── ticket.js
-│       │           └── demo/           # Giao diện vé/check-in của Ngọc
-│       └── test/java/com/backend/cenima/
-│           ├── TraditionalJwtTest.java
-│           └── MlDsaJwtTest.java       # Nếu đã thêm test ML-DSA
-├── database/sqlserver/                # DDL, seed, migration
-├── tools/                             # Setup/test PowerShell
-└── docs/                              # API, thiết kế, test, camera, ...
+CUSTOMER
+   |
+   v
+Đăng nhập
+   |
+   v
+Chọn phim → Suất chiếu → Ghế
+   |
+   v
+POST /api/bookings
+   |
+   v
+SQL Server
+Booking + Ticket (UNUSED)
+   |
+   v
+Yêu cầu phát hành vé
+   |
+   v
+POST /api/tickets/{ticketId}/token
+   |
+   v
+Ký JWT bằng thuật toán được chọn
+   |
+   v
+Tạo QR hoặc mã tham chiếu etkt:
+   |
+   v
+Khách hàng nhận vé điện tử
 ```
 
-> Cấu trúc trên phản ánh source tích hợp đã xem **cộng với các file frontend/ML-DSA được thêm trong quá trình làm việc**. Các file bổ sung phải tồn tại trên máy local của bạn mới chạy được; repository GitHub có thể chưa nhận đủ các thay đổi chưa commit/push.
+### 3.2. Quy trình xác minh và check-in
 
-## 4. Chuẩn bị môi trường
+```text
+STAFF / ADMIN
+   |
+   v
+Đăng nhập
+   |
+   v
+Mở /check-in.html
+   |
+   v
+Quét QR / Tải ảnh / Nhập JWT
+   |
+   v
+POST /api/tickets/verify
+   |
+   v
+Xác minh chữ ký và kiểm tra vé
+   |
+   v
+Hiển thị kết quả xác minh
+   |
+   v
+Nhân viên xác nhận Check-in
+   |
+   v
+POST /api/tickets/check-in
+   |
+   v
+Ticket: UNUSED → USED
+```
 
-### Phần mềm
+Verify không thay đổi trạng thái sử dụng vé. Check-in thành công đánh dấu vé đã sử dụng, giúp ngăn chặn việc sử dụng lại cùng một vé.
 
-- **JDK 21 trở lên**, khuyến nghị JDK 21 khi phát triển nhóm vì project biên dịch với `release 21`. Máy dùng JDK 26 đã biên dịch thành công trong phiên làm việc này.
-- **VS Code** và Extension Pack for Java.
-- **SQL Server** chạy local, bật TCP/IP nếu cấu hình JDBC dùng `localhost:1433`; **SSMS** để quản lý DB.
-- **`sqlcmd`** có trong `PATH` nếu chạy các script setup database.
-- **Git** để clone và push code.
-- **Postman** (không bắt buộc, dùng để test API).
-- **Không cần cài Maven riêng**: đã có `cenima/mvnw.cmd`.
-- **Không cần React hoặc Node.js để chạy frontend**: HTML/CSS/JS được Spring Boot phục vụ trực tiếp.
+### 3.3. Phân biệt các loại JWT
 
-### Kiểm tra trong PowerShell
+**JWT đăng nhập:** Được phát hành sau khi xác thực tài khoản, sử dụng để truy cập API và thực hiện phân quyền. Trong hệ thống hiện tại, luồng xác thực người dùng sử dụng RS256.
+
+**JWT vé điện tử:** Chứa thông tin vé và được ký số nhằm hỗ trợ xác minh tính toàn vẹn, nguồn gốc của dữ liệu vé.
+
+JWT vé điện tử không được sử dụng thay thế access token đăng nhập.
+
+---
+
+## 4. Cấu trúc thư mục dự án
+
+```text
+cenima_backend_thao/
+|
+|-- README.md
+|-- cenima/
+|   |-- pom.xml
+|   |-- mvnw.cmd
+|   |-- src/
+|       |-- main/
+|       |   |-- java/com/backend/cenima/
+|       |   |   |-- Controller/
+|       |   |   |-- Service/
+|       |   |   |-- Entity/
+|       |   |   |-- Repository/
+|       |   |   |-- Security/
+|       |   |   |   |-- auth/
+|       |   |   |   |-- contract/
+|       |   |   |   |-- adapter/
+|       |   |   |   |-- traditional/
+|       |   |   |   |-- pq/
+|       |   |   |-- config/
+|       |   |
+|       |   |-- resources/
+|       |       |-- application.properties
+|       |       |-- application-integrated.properties
+|       |       |-- static/
+|       |           |-- index.html
+|       |           |-- login.html
+|       |           |-- admin.html
+|       |           |-- check-in.html
+|       |           |-- assets/
+|       |
+|       |-- test/
+|
+|-- database/
+|   |-- sqlserver/
+|
+|-- tools/
+|-- docs/
+```
+
+Các thành phần chính liên quan đến ML-DSA-44:
+
+```text
+Security/pq/
+|-- MlDsaKeyManager.java
+|-- MlDsaJwtSigner.java
+|-- MlDsaJwtVerifier.java
+|-- MlDsaJwtService.java
+
+config/
+|-- MlDsaTicketConfig.java
+
+src/test/java/com/backend/cenima/
+|-- MlDsaJwtTest.java
+```
+
+Thư mục `cenima/.local/` được tạo trên từng máy để lưu thông tin môi trường và dữ liệu nhạy cảm. Không đưa thư mục này lên GitHub.
+
+---
+
+## 5. Chuẩn bị môi trường
+
+### 5.1. Yêu cầu
+
+- Java JDK 21 trở lên.
+- Microsoft SQL Server.
+- VS Code hoặc IDE hỗ trợ Java.
+- Git.
+- PowerShell trên Windows.
+- `sqlcmd` nếu sử dụng các script cấu hình database.
+- Maven Wrapper có sẵn trong dự án.
+
+Kiểm tra các công cụ:
 
 ```powershell
 java -version
-javac -version
 git --version
 sqlcmd -?
 ```
 
-Chạy Maven Wrapper từ **root repository**:
+### 5.2. Clone source
+
+Sau khi nhánh tích hợp `merge_test_2` được push lên GitHub:
 
 ```powershell
-cd C:\Users\admin\cenima_backend_moi
-.\cenima\mvnw.cmd -version
-```
+git clone -b merge_test_2 --single-branch https://github.com/thaone-hub/cenima_backend_thao.git
 
-Nếu có sẵn source ở thư mục khác, thay đường dẫn cho phù hợp. **Không cần clone lại repo đang làm việc.**
-
-## 5. Cài đặt lần đầu
-
-> **Nếu máy đã chạy được website và đặt vé thành công, bỏ qua toàn bộ mục 5.** Không chạy lại initializer hay reset DB.
-
-### 5.1. Lấy source khi chưa có repo
-
-```powershell
-git clone https://github.com/thaone-hub/cenima_backend_thao.git
 cd cenima_backend_thao
 ```
 
-Nếu nhóm lưu source dưới tên `cenima_backend_moi`, chỉ cần mở đúng thư mục đó trong VS Code. Dùng `git status` để xác nhận checkout hiện tại.
+Nếu đã có repository trên máy, không cần clone lại.
 
-### 5.2. Cho phép chạy PowerShell script trong phiên hiện tại
+### 5.3. Khởi tạo database lần đầu
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-Chính sách này chỉ có hiệu lực trong cửa sổ PowerShell hiện tại.
-
-### 5.3. Chuẩn bị SQL Server **chỉ khi database mới/trống**
-
-Từ thư mục root (`...\cenima_backend_moi`):
+Chỉ thực hiện khi cài đặt trên một database mới hoặc trống:
 
 ```powershell
 .\tools\Initialize-Database.ps1 -Database CINEMA_THAO_ETICKET_DEMO
-.\tools\Initialize-Database.ps1 -Database CINEMA_THAO_ETICKET_TEST
 ```
 
-- Cần SQL Server, `sqlcmd`, Windows Authentication có đủ quyền tạo schema/DB.
-- `CINEMA_THAO_ETICKET_DEMO`: dữ liệu chạy web.
-- `CINEMA_THAO_ETICKET_TEST`: dành riêng cho kiểm thử tự động.
-- **Không chạy trên DB đã có bảng/dữ liệu.** Với DB hiện hữu, xem migration ở `database/sqlserver/08-upgrade-existing.sql` và sao lưu trước khi thao tác.
-
-### 5.4. Tạo thông tin kết nối local — **chỉ lần đầu**
+Sau đó tạo cấu hình kết nối local:
 
 ```powershell
 .\tools\Provision-Local.ps1
-. .\cenima\.local\env.ps1
 ```
 
-`Provision-Local.ps1` tạo SQL login giới hạn quyền và lưu kết nối vào `cenima/.local/env.ps1`. Script sẽ từ chối nếu thông tin local đã tồn tại, để tránh ghi đè mật khẩu.
-
-### 5.5. Cấu hình mật khẩu tài khoản demo — **chỉ lần đầu**
+Thiết lập mật khẩu cho các tài khoản demo theo hướng dẫn của script:
 
 ```powershell
 .\tools\Set-DemoPasswords.ps1
-. .\cenima\.local\demo-auth.ps1
 ```
 
-Script tạo mật khẩu BCrypt cho ba tài khoản demo từ seed và lưu mật khẩu tại `cenima/.local/demo-auth.ps1`; script không dùng để reset tài khoản đã có mật khẩu thực.
+**Cảnh báo:** Không chạy lại script khởi tạo database trên database đã có dữ liệu. Cần sao lưu trước khi thực hiện migration hoặc cập nhật dữ liệu.
 
-| Vai trò | Email demo |
+### 5.4. Tài khoản demo
+
+| Vai trò | Email |
 |---|---|
 | CUSTOMER | `customer@cinema.test` |
 | STAFF | `staff@cinema.test` |
 | ADMIN | `admin@cinema.test` |
 
-**Không viết mật khẩu cụ thể vào README hoặc commit các file `.local/`.**
+Mật khẩu do từng máy thiết lập và không được lưu trong README.
 
-### 5.6. Kiểm tra môi trường trước khi build
+Có thể thiết lập lại mật khẩu riêng cho ADMIN trên database demo:
 
 ```powershell
-# Từ root của repo
-. .\cenima\.local\env.ps1
-. .\cenima\.local\demo-auth.ps1
-
-# Không in giá trị bí mật
-Test-Path .\cenima\.local\env.ps1
-Test-Path .\cenima\.local\demo-auth.ps1
+.\tools\Set-LocalAdmin.ps1 -Account "admin@cinema.test"
 ```
 
-File `cenima/.env.example` chỉ là ví dụ; Spring Boot **không tự động đọc** file `.env`.
+Script chỉ sử dụng cho môi trường local được hỗ trợ và yêu cầu quyền truy cập SQL Server tương ứng.
 
-### 5.7. Đồng bộ danh mục phim NCC vào SQL Server (tùy chọn)
+---
 
-Star Cinema có hai nguồn dữ liệu phim:
+## 6. Khởi động ứng dụng
 
-- Giao diện giới thiệu phim sử dụng `cenima/src/main/resources/static/assets/ncc-catalog.json`.
-- Chức năng đặt vé sử dụng bảng `Movies` và `Showtimes` trong SQL Server thông qua API.
-
-Vì vậy, chỉ cập nhật `ncc-catalog.json` không tự động cập nhật
-danh sách phim có thể đặt vé trong database.
-
-Để tạo dữ liệu thống nhất cho môi trường demo, sử dụng:
-
-`database/sqlserver/09-sync-ncc-catalog-demo.sql`
-
-**Phạm vi:**
-
-- Chỉ chạy trên database `CINEMA_THAO_ETICKET_DEMO`.
-- Nhập 9 phim từ bản snapshot danh mục NCC ngày 04/11/2026.
-- Cập nhật thông tin các phim tương ứng nếu đã tồn tại.
-- Có tùy chọn ẩn các phim seed cũ bằng cách đổi `Status`.
-- Tạo suất chiếu giả lập trong tương lai để kiểm thử đặt vé.
-- Không xóa các bản ghi Booking hoặc Ticket đã có.
-
-**Cách thực hiện:**
-
-1. Sao lưu database demo trước khi thay đổi dữ liệu.
-2. Mở file SQL bằng VS Code (MSSQL extension) hoặc SSMS.
-3. Kết nối đến database `CINEMA_THAO_ETICKET_DEMO`.
-4. Giữ `@PreviewOnly = 1` và chạy toàn bộ script để xem trước.
-5. Kiểm tra danh sách phim, phòng và suất chiếu dự kiến.
-6. Đổi `@PreviewOnly = 0`, chạy lại toàn bộ script để lưu.
-7. Kiểm tra thông báo `COMMIT SUCCESS`.
-
-Nếu hiển thị `PREVIEW ONLY`, toàn bộ thay đổi đã được
-ROLLBACK và chưa được lưu vào database.
-
-**Lưu ý quan trọng:**
-
-- Đây là dữ liệu mẫu phục vụ học tập, không phải lịch chiếu thực tế của NCC.
-- Danh mục NCC là snapshot, không tự cập nhật theo thời gian thực.
-- Suất chiếu trong script được tạo cho ngày kế tiếp tại thời điểm chạy.
-- Sau khi suất chiếu hết hạn, cần bổ sung suất chiếu tương lai.
-- Script `tools/Sync-NccCatalog.ps1` chỉ cập nhật catalog JSON
-  và poster, không trực tiếp cập nhật bảng Movies trong SQL Server.
-- Việc `git pull` không tự động thực thi SQL hoặc đồng bộ database.
-
-Có thể dùng `tools/Add-DemoShowtimes.ps1 -Days 3` để bổ sung
-suất chiếu demo cho tối đa ba phim đang chiếu, sau khi đã
-kiểm tra đúng kết nối và sao lưu database.
-
-Không chạy các script dữ liệu demo trên database production.
-
-
-## 6. Chạy lại dự án hằng ngày
-
-### Cách nhanh nhất — đã setup DB và mật khẩu trước đó
-
-**Terminal 1 — build & khởi động backend:**
+Tại thư mục gốc repository, chạy:
 
 ```powershell
-cd C:\Users\admin\cenima_backend_moi
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-. .\cenima\.local\env.ps1
 
-# Dừng backend cũ (Ctrl+C) trước khi clean để không khóa file JAR
-.\cenima\mvnw.cmd -B -f cenima\pom.xml clean package -DskipTests
-
-cd cenima
-java -jar target\cenima-0.0.1-SNAPSHOT.jar --spring.profiles.active=integrated --cinema.mldsa.enabled=true
+.\tools\Start-Portal.ps1 -Build
 ```
 
-- **Terminal phải giữ mở** trong lúc sử dụng web.
-- `--spring.profiles.active=integrated`: dùng Authentication thật và DB local đã cấu hình.
-- `--cinema.mldsa.enabled=true`: kích hoạt cấu hình ML-DSA-44 **nếu module ML-DSA đã được bổ sung và có đủ signer/verifier**. Nếu chỉ cần kiểm tra frontend, có thể bỏ cờ này.
-- Nếu vừa đổi code HTML/CSS/JS trong JAR, **build lại rồi khởi động lại** để JAR nhận file mới.
+Tham số `-Build` yêu cầu đóng gói lại ứng dụng trước khi khởi động.
 
-**Mở giao diện:**
-
-| Giao diện | URL |
-|---|---|
-| Trang chủ CineVerse | <http://localhost:8080/cinema/index.html> |
-| Đăng nhập | <http://localhost:8080/cinema/login.html> |
-| Chọn suất chiếu | `/cinema/showtimes.html?movieId=<ID>` |
-| Chọn ghế | `/cinema/seats.html?movieId=<ID>&showtimeId=<ID>` |
-| Vé điện tử | `/cinema/ticket.html?ticketId=<ID>` |
-| E-Ticket demo của Ngọc | <http://localhost:8080/demo/index.html> |
-| Check-in nhân viên | <http://localhost:8080/demo/check-in.html> |
-
-`<ID>` là ID thực từ database, **không dùng một ID cố định cho mọi máy**.
-
-### Lệnh build thường dùng
+Nếu đã build và không thay đổi mã nguồn, có thể chạy:
 
 ```powershell
-# Chạy từ root repository
-.\cenima\mvnw.cmd -B -f cenima\pom.xml clean compile
-.\cenima\mvnw.cmd -B -f cenima\pom.xml clean package -DskipTests
-.\cenima\mvnw.cmd -B -f cenima\pom.xml clean verify
+.\tools\Start-Portal.ps1
 ```
 
-- `clean compile`: biên dịch code Java chính, chưa chạy test.
-- `clean package -DskipTests`: đóng gói JAR, **bỏ qua chạy test** (vẫn có thể biên dịch test).
-- `clean verify`: build và chạy toàn bộ test; cần cấu hình DB test đúng nếu muốn các bài test tích hợp SQL được thực thi.
-- Cảnh báo `sun.misc.Unsafe` từ Lombok trên JDK mới không nhất thiết là lỗi; xem dòng cuối `BUILD SUCCESS` / `BUILD FAILURE`.
+Giữ Terminal đang chạy backend. Nhấn `Ctrl + C` khi cần dừng ứng dụng.
 
-### Dừng server
+Để chạy ở cổng khác:
 
-Nhấn `Ctrl + C` ở Terminal đang chạy `java -jar`. Nếu cổng 8080 đã bị chiếm, xem mục [lỗi thường gặp](#12-lỗi-thường-gặp).
+```powershell
+.\tools\Start-Portal.ps1 -Port 8081
+```
 
-## 7. Hướng dẫn sử dụng website
+### 6.1. Các trang chính
 
-
-## 7. Hướng dẫn sử dụng Star Cinema
-
-### 7.1. Các trang chính
-
-| Chức năng | Đường dẫn |
+| Trang | URL |
 |---|---|
 | Trang chủ Star Cinema | `http://localhost:8080/` |
 | Đăng nhập | `http://localhost:8080/login.html` |
-| Trang quản trị | `http://localhost:8080/admin.html` |
-| Xác minh / Check-in vé | `http://localhost:8080/check-in.html` |
+| Danh sách phim | `http://localhost:8080/movies.html` |
+| Quản trị | `http://localhost:8080/admin.html` |
+| Xác minh và check-in | `http://localhost:8080/check-in.html` |
 
-Website chạy bằng Spring Boot với profile `integrated`
-và sử dụng SQL Server làm nguồn dữ liệu đặt vé.
+Trang quản trị yêu cầu ADMIN. Trang check-in yêu cầu STAFF hoặc ADMIN.
 
-### 7.2. Đặt vé và tạo mã QR (CUSTOMER)
+Trong trường hợp ADMIN được tự động chuyển về `/admin.html` sau đăng nhập, có thể mở trực tiếp `/check-in.html` trên cùng tab trình duyệt.
+
+---
+
+## 7. Hướng dẫn sử dụng
+
+### 7.1. Đặt vé
 
 1. Đăng nhập bằng tài khoản CUSTOMER.
-2. Mở trang chủ Star Cinema.
-3. Chọn mục đặt vé và chọn bộ phim muốn xem.
-4. Chọn suất chiếu tương lai và ghế còn trống.
-5. Xác nhận đặt vé để tạo Booking và Ticket trong database.
-6. Mở mục **Vé của tôi**.
-7. Chọn **Xem vé / QR** trên vé cần kiểm tra.
-8. Hệ thống phát hành JWT vé điện tử và hiển thị QR.
-9. Nhấn **Tải mã QR** để lưu ảnh PNG về máy.
+2. Truy cập mục đặt vé trên Star Cinema.
+3. Chọn phim và suất chiếu tương lai.
+4. Chọn ghế còn trống.
+5. Kiểm tra thông tin và xác nhận đặt vé.
+6. Truy cập **Vé của tôi** để xem các vé đã đặt.
 
-Trên giao diện Star Cinema hiện tại, chức năng
-**Xem vé / QR** phát hành vé bằng thuật toán RS256.
+Dữ liệu đặt vé được lưu trong SQL Server. Mỗi ghế được đặt tương ứng với một vé điện tử.
 
-QR có thể chứa JWT đầy đủ hoặc mã tham chiếu bắt đầu bằng
-`etkt:` tùy theo dung lượng dữ liệu và cấu hình backend.
+Hệ thống demo chưa tích hợp cổng thanh toán thực tế. Trạng thái thanh toán trong dữ liệu mẫu được sử dụng để mô phỏng nghiệp vụ.
 
-Mỗi ghế được đặt tương ứng với một Ticket riêng.
+### 7.2. Phát hành vé điện tử
 
-### 7.3. Đăng nhập nhân viên hoặc quản trị viên
+Tại mục **Vé của tôi**, chọn vé cần xem và sử dụng chức năng **Xem vé / QR**.
 
-Tài khoản kiểm tra vé phải có vai trò STAFF hoặc ADMIN.
+Frontend gửi yêu cầu đến:
 
-| Vai trò | Email demo |
-|---|---|
-| STAFF | `staff@cinema.test` |
-| ADMIN | `admin@cinema.test` |
+```http
+POST /api/tickets/{ticketId}/token
+```
 
-Đăng nhập tại:
+Backend tạo JWT được ký số, sau đó sinh ảnh QR.
 
-`http://localhost:8080/login.html`
+Trong bản Star Cinema nền trước khi merge, nút xem vé sử dụng RS256. Danh sách thuật toán được backend hỗ trợ có thể kiểm tra tại `/api/tickets/algorithms`. Nếu giao diện sau merge có thêm bộ chọn thuật toán, cần kiểm thử lại từng lựa chọn trước khi nghiệm thu.
 
-Mật khẩu được thiết lập trong môi trường local của từng máy.
-Không ghi mật khẩu thật vào README hoặc commit lên GitHub.
+### 7.3. Xác minh QR
 
-Sau khi đăng nhập, mở trang:
+Đăng nhập bằng STAFF hoặc ADMIN, sau đó mở:
 
 `http://localhost:8080/check-in.html`
 
-**Lưu ý:** Tài khoản ADMIN có thể được điều hướng tự động
-đến `/admin.html` sau khi đăng nhập. Khi đó, nhập thủ công
-đường dẫn `/check-in.html` trên chính tab đã đăng nhập.
+Có thể nhập vé theo ba cách:
 
-Giao diện hiện tại sử dụng phiên đăng nhập để xác thực
-các API kiểm tra vé; không cần dán access token thủ công.
+- Dán JWT hoặc mã tham chiếu `etkt:`.
+- Tải file ảnh QR từ máy.
+- Quét QR bằng camera.
 
-### 7.4. Quét mã QR và xác minh vé
+Khi tải ảnh QR, frontend sử dụng `FileReader.readAsDataURL()` để nạp ảnh trước khi giải mã. Cách này tránh lỗi ảnh tạm `blob:` bị chặn bởi Content Security Policy của Star Cinema.
 
-Trang check-in hỗ trợ ba cách nhập mã vé:
+Sau khi đọc được mã, hệ thống gọi:
 
-1. **Tải ảnh QR:** chọn file PNG đã tải từ Star Cinema.
-2. **Quét bằng camera:** bật camera và đưa mã QR vào khung quét.
-3. **Nhập thủ công:** dán JWT hoặc mã tham chiếu `etkt:`.
+```http
+POST /api/tickets/verify
+```
 
-Với chức năng tải ảnh QR, frontend sử dụng `FileReader`
-để đọc ảnh thành Data URL, sau đó giải mã bằng thư viện
-`qr-scanner`.
+Nếu vé hợp lệ, hệ thống hiển thị thông tin cần thiết để nhân viên đối chiếu.
 
-Cách xử lý này tương thích với chính sách bảo mật CSP
-của Star Cinema, trong đó `img-src` cho phép `data:`
-nhưng không cho phép `blob:`.
+### 7.4. Check-in
 
-Sau khi đọc được QR, frontend gọi API:
+Sau khi xác minh thành công, nhân viên nhấn **Check-in**.
 
-`POST /api/tickets/verify`
+Hệ thống gọi:
 
-Nếu thành công, hệ thống hiển thị thông tin vé gồm
-phim, suất chiếu, phòng, ghế và kết quả xác minh.
-
-**Verify chỉ xác minh vé, không thay đổi trạng thái sử dụng.**
-
-### 7.5. Check-in và chống sử dụng lại vé
-
-Sau khi Verify thành công, nhân viên kiểm tra thông tin
-và nhấn nút **Check-in**.
-
-Frontend gọi:
-
-`POST /api/tickets/check-in`
+```http
+POST /api/tickets/check-in
+```
 
 Kết quả mong đợi:
 
 | Thao tác | Kết quả |
 |---|---|
-| Verify vé hợp lệ | Thành công, vé vẫn `UNUSED` |
-| Check-in lần đầu | Thành công, vé chuyển sang `USED` |
-| Check-in lại cùng vé | Bị từ chối vì vé đã được sử dụng |
-| Verify JWT bị sửa trái phép | Chữ ký không hợp lệ |
-| CUSTOMER thực hiện Check-in | Bị từ chối do thiếu quyền |
+| Verify vé hợp lệ | Hiển thị thông tin vé |
+| Check-in lần đầu | Vé chuyển từ `UNUSED` sang `USED` |
+| Check-in lần thứ hai | Bị từ chối |
+| JWT bị sửa trái phép | Chữ ký không hợp lệ |
+| CUSTOMER gọi API check-in | Bị từ chối do thiếu quyền |
 
-Quét QR không đồng nghĩa với việc vé đã được sử dụng.
-Chỉ thao tác Check-in thành công mới đánh dấu vé là `USED`.
+Quét QR không đồng nghĩa với việc vé đã được sử dụng. Việc cập nhật trạng thái chỉ xảy ra khi Check-in thành công.
 
-### 7.6. Phạm vi kiểm thử
+---
 
-Đã kiểm tra việc tải ảnh QR từ Star Cinema và khắc phục
-lỗi giải mã ảnh trong trình duyệt.
+## 8. Dữ liệu phim và suất chiếu demo
 
-Các trường hợp cần tiếp tục nghiệm thu độc lập:
+Star Cinema sử dụng danh mục phim NCC làm dữ liệu tham khảo trên giao diện. Chức năng đặt vé lấy dữ liệu phim và suất chiếu từ SQL Server.
 
-- Quét QR bằng camera trên thiết bị thật.
-- Kiểm tra chống check-in hai lần.
-- JWT hết hạn hoặc sai chữ ký.
-- Kiểm tra quyền CUSTOMER, STAFF, ADMIN.
-- Verify/Check-in với các thuật toán JWT khác khi được
-  tích hợp vào giao diện phát hành vé.
+Hai nguồn dữ liệu này không tự đồng bộ với nhau.
 
+Nếu repository đã bổ sung file:
 
-## 8. API chính
+`database/sqlserver/09-sync-ncc-catalog-demo.sql`
 
-**Base URL:** `http://localhost:8080` · `Content-Type: application/json`.
+có thể sử dụng file để cập nhật danh mục phim trong database demo.
 
-| Method | Endpoint | Ý nghĩa | Quyền ở profile integrated |
-|---|---|---|---|
-| POST | `/api/auth/login` | Đăng nhập | Public |
-| POST | `/api/auth/refresh` | Cấp lại access token | Public, yêu cầu refresh token hợp lệ |
-| POST | `/api/auth/logout` | Thu hồi refresh token | Public, yêu cầu refresh token hợp lệ |
-| GET | `/api/movies` | Phim đang chiếu | Public sau khi cấu hình frontend |
-| GET | `/api/movies?status=2` | Phim sắp chiếu | Public sau khi cấu hình frontend |
-| GET | `/api/movies/{movieId}/showtimes` | Suất chiếu sắp tới | Public sau khi cấu hình frontend |
-| GET | `/api/showtimes/{showtimeId}/seats` | Sơ đồ ghế | Public sau khi cấu hình frontend |
-| POST | `/api/bookings` | Đặt ghế/tạo vé | CUSTOMER đã đăng nhập |
-| GET | `/api/tickets/algorithms` | Thuật toán JWT và trạng thái | Cần access token |
-| GET | `/api/tickets/{ticketId}` | Thông tin vé | Chủ vé hoặc ADMIN |
-| POST | `/api/tickets/{ticketId}/token` | Phát hành JWT + QR | Chủ vé hoặc ADMIN |
-| POST | `/api/tickets/verify` | Xác minh, không sử dụng | STAFF hoặc ADMIN |
-| POST | `/api/tickets/check-in` | Xác minh và dùng vé | STAFF hoặc ADMIN |
+**Trước khi chạy:**
 
-### Ví dụ request
+1. Sao lưu database `CINEMA_THAO_ETICKET_DEMO`.
+2. Kiểm tra đúng database đích.
+3. Chạy script ở chế độ xem trước với `@PreviewOnly = 1`.
+4. Kiểm tra kết quả.
+5. Đổi `@PreviewOnly = 0` và chạy lại nếu muốn lưu thay đổi.
 
-**Đăng nhập** — `POST /api/auth/login`:
+Suất chiếu được tạo bởi script là **lịch giả lập phục vụ kiểm thử**, không phải lịch chiếu chính thức của NCC.
 
-```json
-{"email":"customer@cinema.test","password":"<mat-khau-demo>"}
+Khi lịch chiếu đã hết hạn, có thể bổ sung dữ liệu demo bằng:
+
+```powershell
+.\tools\Add-DemoShowtimes.ps1 -Days 3
 ```
 
-**Đặt vé** — `POST /api/bookings`:
+Chỉ sử dụng trên môi trường demo đã cấu hình đúng.
 
-```json
-{"showtimeId": 1, "seatIds": [1, 2]}
+---
+
+## 9. JWT và chữ ký số
+
+### 9.1. JWT đăng nhập
+
+Access token được cấp sau khi xác thực người dùng, sử dụng để truy cập các API yêu cầu đăng nhập.
+
+Các yêu cầu được gửi theo định dạng:
+
+```http
+Authorization: Bearer <access_token>
 ```
 
-Response trả `id`, `showtimeId`, `status`, `totalPrice`, `tickets` (mỗi phần tử có `ticketId`, `seat`, `ticketCode`, `price`, `status`).
+Hệ thống áp dụng phân quyền theo vai trò CUSTOMER, STAFF và ADMIN.
 
-**Phát hành ML-DSA** — `POST /api/tickets/{ticketId}/token`:
+### 9.2. JWT vé điện tử
 
-```json
-{"algorithm":"ML-DSA-44"}
-```
+JWT vé điện tử được ký số và chứa các thông tin như mã vé, phim, suất chiếu, ghế và thời hạn hiệu lực.
 
-Response gồm `ticket`, `token` (JWT đầy đủ), `algorithm`, `issuedAt`, `expiresAt`, `qr` (`mode`, `content`, `pngBase64`).
-
-**Xác minh/check-in** — `POST /api/tickets/verify` hoặc `/api/tickets/check-in`:
-
-```json
-{"value":"<JWT-day-du-hoac-etkt:...>"}
-```
-
-> Lưu ý: dùng `Authorization: Bearer <accessToken>` cho các API cần xác thực. **Không gửi access token/JWT lên GitHub, ảnh chụp màn hình hoặc đường dẫn URL.**
-
-## 9. JWT, ML-DSA-44 và QR
-
-### 9.1. Thuật toán vé điện tử
-
-| Thuật toán | Nhóm | Module |
-|---|---|---|
-| `RS256` | RSA (truyền thống) | `Security/traditional/` |
-| `ES256` | ECDSA P-256 (truyền thống) | `Security/traditional/` |
-| `EdDSA` | Ed25519 (truyền thống) | `Security/traditional/` |
-| **`ML-DSA-44`** | **Chữ ký hậu lượng tử** | **`Security/pq/`** |
-
-`Security/adapter/JwtProviderRegistry.java` quản lý danh sách thuật toán cho E-Ticket. Thuật toán chỉ hiện `available=true` khi backend đăng ký đủ **signer và verifier**. `MlDsaTicketConfig.java` chịu trách nhiệm đăng ký phần ML-DSA trong Spring khi được bật. **Không cần thêm ML-DSA vào `Security/auth/SecurityConfig.java`**: file đó bảo vệ API và giữ luồng đăng nhập RS256.
-
-### 9.2. Payload E-Ticket
-
-Source gốc phát hành các claim cơ bản:
+Header của token vé ML-DSA-44 có dạng:
 
 ```json
 {
-  "iss": "cinema-ticket",
-  "aud": "cinema-checkin",
-  "ticketId": 2,
-  "movieId": 1,
-  "showtimeId": 1,
-  "seatCode": "C2",
-  "iat": 0,
-  "exp": 0
+  "alg": "ML-DSA-44",
+  "typ": "eticket+jwt",
+  "kid": "cinema-mldsa44-v1"
 }
 ```
 
-`iat` và `exp` trên chỉ minh họa **tên trường**; server tạo giá trị Unix timestamp thật tại thời điểm phát hành, không điền `0` khi sử dụng.
+Khi xác minh, hệ thống kiểm tra chữ ký bằng khóa công khai tương ứng. Các điều kiện nghiệp vụ như thời hạn và trạng thái vé được xử lý ở lớp nghiệp vụ.
 
-### 9.3. File của phần ML-DSA
+### 9.3. Cấu hình ML-DSA-44
 
-```text
-cenima/src/main/java/com/backend/cenima/Security/pq/
-├── MlDsaKeyManager.java
-├── MlDsaJwtSigner.java
-├── MlDsaJwtVerifier.java
-└── MlDsaJwtService.java
+Mô-đun ML-DSA chỉ được kích hoạt khi cấu hình:
 
-cenima/src/main/java/com/backend/cenima/config/MlDsaTicketConfig.java
-cenima/src/test/java/com/backend/cenima/MlDsaJwtTest.java
+```properties
+cinema.mldsa.enabled=true
 ```
 
-Các test ML-DSA kiểm tra ký/xác minh, payload bị sửa, khóa sai và nạp lại khóa. `pom.xml` ở máy đã bổ sung thư viện Bouncy Castle; phiên bản dependency cần xem **trực tiếp trong pom.xml hiện tại**, vì các bản vá trước đó có thể khác phiên bản.
-
-**Bật ML-DSA khi khởi động:**
-
-```powershell
-# Khi đã cd vào thư mục cenima
-java -jar target\cenima-0.0.1-SNAPSHOT.jar --spring.profiles.active=integrated --cinema.mldsa.enabled=true
-```
-
-Hoặc đặt biến cấu hình trong Terminal hiện tại trước khi chạy Java:
+Có thể bật từ PowerShell trước khi khởi động:
 
 ```powershell
 $env:CINEMA_MLDSA_ENABLED = "true"
+
+.\tools\Start-Portal.ps1 -Build
 ```
 
-Nếu ML-DSA không hiện trong `/api/tickets/algorithms`, cần kiểm tra `MlDsaTicketConfig`, việc đăng ký vào registry, lỗi startup và điều kiện enable; chỉ thêm dependency là chưa đủ.
+Theo cấu hình hợp nhất từ `merge_test_1`, thư mục khóa ML-DSA mặc định là:
 
-### 9.4. Vì sao QR có thể là mã tham chiếu?
+`${user.home}/.cinema/mldsa44`
 
-JWT ML-DSA có chữ ký lớn, có thể vượt dung lượng QR mong muốn. Backend tự chuyển sang **QR dạng tham chiếu** khi cần:
+Có thể thay đổi bằng thuộc tính `cinema.mldsa.key-dir`.
+
+Không xóa hoặc thay thế khóa khi còn vé hợp lệ được phát hành bằng cặp khóa đó.
+
+### 9.4. Kiểm tra cặp khóa ML-DSA
+
+`MlDsaKeyManager` thực hiện:
+
+- Nạp khóa riêng và khóa công khai từ file.
+- Tạo cặp khóa mới nếu chưa tồn tại.
+- Từ chối khi chỉ tồn tại một file khóa.
+- Kiểm tra khả năng ký và xác minh bằng cặp khóa đã nạp.
+- Từ chối cặp khóa bị hỏng hoặc không khớp mà không tự động thay thế.
+
+### 9.5. JWT đầy đủ và mã QR tham chiếu
+
+Với các JWT có dung lượng lớn, hệ thống có thể tạo QR chứa mã tham chiếu dạng:
 
 ```text
-QR mã tham chiếu: etkt:<chuoi-ma>
-       │
-       ▼
-Server tra tham chiếu trong SQL Server
-       │
-       ▼
-Lấy JWT đã ký → kiểm tra chữ ký → đối chiếu vé
+etkt:<reference>
 ```
 
-Giao diện vẫn có ô **JWT đầy đủ** để copy, trong khi QR chỉ chứa mã ngắn. Mã tham chiếu và JWT thuộc **cùng một vé**, đều bị từ chối sau khi check-in thành công hoặc hết hạn theo chính sách.
+Khi quét, backend truy xuất JWT tương ứng từ database và thực hiện xác minh.
 
+Mã tham chiếu giúp giảm lượng dữ liệu cần mã hóa trong QR, nhưng không thay thế bước kiểm tra chữ ký số.
 
-### 9.5. Luồng kiểm tra vé bằng STAFF/ADMIN
+### 9.6. Định hướng nghiên cứu Hybrid
 
-Đối với giao diện Star Cinema đang sử dụng:
+Đề tài hướng đến so sánh các cấu hình:
 
-1. CUSTOMER đặt vé và tải ảnh QR từ mục **Vé của tôi**.
-2. STAFF hoặc ADMIN đăng nhập tại `/login.html`.
-3. Mở `/check-in.html` trên tab đã đăng nhập.
-4. Tải ảnh QR, quét camera hoặc nhập JWT/mã `etkt:`.
-5. Hệ thống gọi `/api/tickets/verify` để xác minh.
-6. Nếu vé hợp lệ, nhân viên nhấn **Check-in**.
-7. Hệ thống gọi `/api/tickets/check-in` và cập nhật trạng thái.
-8. Thử check-in lại cùng vé để kiểm tra chống sử dụng lại.
+- RS256, ES256, EdDSA.
+- ML-DSA-44 độc lập.
+- RS256 + ML-DSA-44.
+- ES256 + ML-DSA-44.
+- EdDSA + ML-DSA-44.
 
-Cần phân biệt:
+Trong mô hình Hybrid đề xuất, cùng một payload phải được bảo vệ bằng hai chữ ký và chỉ được chấp nhận khi cả hai chữ ký đều hợp lệ.
 
-- Access token: chứng minh danh tính và quyền STAFF/ADMIN.
-- JWT vé điện tử: chứa thông tin vé, được ký số.
-- QR tham chiếu `etkt:`: dùng để truy xuất JWT tương ứng.
-- Verify: kiểm tra mà không sử dụng vé.
-- Check-in: xác minh và đánh dấu vé đã được sử dụng.
+Cần đánh giá hiệu năng ký, hiệu năng xác minh, kích thước token, chi phí lưu trữ, tác động đến QR và khả năng chống các kịch bản giả mạo.
 
-Frontend check-in sử dụng phiên đăng nhập hiện tại.
-Không nhập mật khẩu hoặc access token vào ô nội dung mã vé.
+**Mô hình Hybrid hai chữ ký là nội dung cần triển khai và nghiệm thu riêng; không được coi là đã hoàn thành chỉ vì từng thuật toán độc lập hoạt động thành công.**
 
+---
 
-## 10. Test bằng Maven, PowerShell và Postman
+## 10. API chính
 
-### 10.1. Unit test ML-DSA riêng
+| Method | Endpoint | Chức năng |
+|---|---|---|
+| POST | `/api/auth/login` | Đăng nhập |
+| POST | `/api/auth/refresh` | Cấp lại access token |
+| POST | `/api/auth/logout` | Đăng xuất và thu hồi refresh token |
+| GET | `/api/movies` | Lấy danh sách phim |
+| GET | `/api/movies/{movieId}/showtimes` | Lấy suất chiếu |
+| GET | `/api/showtimes/{showtimeId}/seats` | Xem ghế |
+| POST | `/api/bookings` | Đặt vé |
+| GET | `/api/tickets/algorithms` | Danh sách thuật toán hỗ trợ |
+| POST | `/api/tickets/{ticketId}/token` | Phát hành JWT và QR |
+| POST | `/api/tickets/verify` | Xác minh vé |
+| POST | `/api/tickets/check-in` | Xác minh và sử dụng vé |
 
-Từ root repo:
+Các API yêu cầu xác thực phải được gọi với access token có vai trò phù hợp.
+
+---
+
+## 11. Kiểm thử hệ thống
+
+### 11.1. Kiểm thử ML-DSA-44
+
+Chạy từ thư mục gốc:
 
 ```powershell
 .\cenima\mvnw.cmd -B -f cenima\pom.xml -Dtest=MlDsaJwtTest test
 ```
 
-Mong đợi `Tests run: 4, Failures: 0, Errors: 0` và `BUILD SUCCESS` **nếu file `MlDsaJwtTest.java` thực tế chứa đúng bốn phương thức test**. Nếu nhận `No tests matching pattern`, kiểm tra `src/test/java/.../MlDsaJwtTest.java` và package/class name; không dùng `-Dsurefire.failIfNoSpecifiedTests=false` để che lỗi chưa có test.
+Bộ test ML-DSA hợp nhất được thiết kế để kiểm tra:
 
-### 10.2. Test toàn bộ dự án
+1. Ký và xác minh JWT hợp lệ.
+2. Phát hiện payload bị thay đổi.
+3. Phát hiện chữ ký bị thay đổi.
+4. Từ chối khóa xác minh không tương ứng.
+5. Nạp lại khóa sau khởi động.
+6. Từ chối header không hợp lệ hoặc trùng thuộc tính.
+7. Từ chối claims trùng lặp.
+8. Phát hiện khóa bị thiếu, hỏng hoặc không khớp.
+9. Từ chối JWS không đúng cấu trúc.
+
+Những kiểm thử này phải được chạy lại sau khi merge. Không coi là đã đạt nếu chưa nhận được kết quả kiểm thử thành công.
+
+### 11.2. Kiểm thử toàn bộ dự án
 
 ```powershell
-cd C:\Users\admin\cenima_backend_moi
-. .\cenima\.local\env.ps1
 .\cenima\mvnw.cmd -B -f cenima\pom.xml clean verify
 ```
 
-`env.ps1` có thể đặt `TEST_DB_URL` cho database `CINEMA_THAO_ETICKET_TEST`; đảm bảo các bài test SQL **không trỏ vào DEMO/production**. Nhiều bài test SQL skip khi chưa cấu hình DB test.
+Các bài test tích hợp có thể yêu cầu database kiểm thử riêng. Không chạy bài kiểm thử có thao tác ghi dữ liệu trên database production.
 
-### 10.3. Smoke test (tùy chọn)
+### 11.3. Kiểm thử giao diện
 
-```powershell
-# Chạy từ root; xem hướng dẫn tools/Smoke-Test.ps1 trước khi sử dụng
-.\tools\Smoke-Test.ps1
-```
+Các luồng cần nghiệm thu:
 
-Smoke test gốc có thể quản lý JVM/cổng/dữ liệu test của riêng nó; chỉ chạy sau khi đọc yêu cầu và đảm bảo môi trường phù hợp. Script migration `tools/Test-LegacyMigration.ps1` dùng để thử nâng cấp database cũ, **không phải lệnh chạy ứng dụng hằng ngày**.
+- CUSTOMER đăng nhập và đặt vé.
+- Phát hành JWT/QR.
+- STAFF/ADMIN đọc QR từ ảnh.
+- Verify vé hợp lệ.
+- Check-in lần đầu.
+- Từ chối check-in lần thứ hai.
+- Từ chối JWT bị chỉnh sửa.
+- Kiểm tra quyền truy cập theo vai trò.
 
-### 10.4. Test API trực tiếp bằng PowerShell
-
-Mở **Terminal 2**, giữ Terminal 1 đang chạy backend:
-
-```powershell
-cd C:\Users\admin\cenima_backend_moi
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-. .\cenima\.local\demo-auth.ps1
-
-$base = 'http://localhost:8080'
-
-# Login CUSTOMER
-$loginBody = @{
-    email = 'customer@cinema.test'
-    password = $env:CINEMA_DEMO_PASSWORD
-} | ConvertTo-Json
-
-$customer = Invoke-RestMethod -Method Post -Uri "$base/api/auth/login" `
-    -ContentType 'application/json' -Body $loginBody
-
-$customerHeaders = @{ Authorization = "Bearer $($customer.accessToken)" }
-
-# Xem danh sach phim
-Invoke-RestMethod -Method Get -Uri "$base/api/movies"
-
-# Xem thuat toan dang san sang
-Invoke-RestMethod -Method Get -Uri "$base/api/tickets/algorithms" `
-    -Headers $customerHeaders
-```
-
-**Ví dụ phát hành vé:** dùng `$ticketId` là vé thuộc tài khoản vừa đăng nhập, không dùng ID giả định:
-
-```powershell
-$ticketId = 2  # DOI thanh Ticket ID thuc te
-
-$issued = Invoke-RestMethod -Method Post `
-    -Uri "$base/api/tickets/$ticketId/token" `
-    -Headers $customerHeaders `
-    -ContentType 'application/json' `
-    -Body '{"algorithm":"ML-DSA-44"}'
-
-# Khong in JWT ra Terminal
-$issued.algorithm
-$issued.qr.mode
-$issued.ticket.ticketId
-```
-
-**Đăng nhập STAFF và Verify:**
-
-```powershell
-$staffBody = @{
-    email = 'staff@cinema.test'
-    password = $env:CINEMA_DEMO_PASSWORD
-} | ConvertTo-Json
-
-$staff = Invoke-RestMethod -Method Post -Uri "$base/api/auth/login" `
-    -ContentType 'application/json' -Body $staffBody
-
-$staffHeaders = @{ Authorization = "Bearer $($staff.accessToken)" }
-
-$verifyBody = @{ value = $issued.token } | ConvertTo-Json -Compress
-
-# Khong tieu thu ve
-Invoke-RestMethod -Method Post -Uri "$base/api/tickets/verify" `
-    -Headers $staffHeaders -ContentType 'application/json' -Body $verifyBody
-
-# CHI KHI MUON DUNG VE THUC SU:
-# Invoke-RestMethod -Method Post -Uri "$base/api/tickets/check-in" `
-#     -Headers $staffHeaders -ContentType 'application/json' -Body $verifyBody
-```
-
-Để lấy riêng access token của STAFF và dán vào giao diện check-in (không hiển thị token):
-
-```powershell
-Set-Clipboard -Value $staff.accessToken
-```
-
-### 10.5. Postman
-
-- `POST /api/auth/login`: `Body → raw → JSON`, gửi email/mật khẩu; copy **accessToken**.
-- Với API cần xác thực: `Authorization → Bearer Token`, dán access token.
-- `GET /api/movies` → `GET /api/movies/{id}/showtimes` → `GET /api/showtimes/{id}/seats`.
-- `POST /api/bookings`: `{"showtimeId":...,"seatIds":[...]}`.
-- `POST /api/tickets/{ticketId}/token`: `{"algorithm":"ML-DSA-44"}`.
-- Đổi sang token đăng nhập **STAFF**, gọi `POST /api/tickets/verify` với `{"value":"..."}`.
-- Gọi check-in sau cùng, vì thao tác này **thay đổi trạng thái vé**.
-
-## 11. Các lệnh Git
-
-Chạy ở root repository:
-
-```powershell
-git status
-git branch
-git remote -v
-git fetch origin
-```
-
-**Khuyến nghị làm trên nhánh riêng** (nếu nhánh chưa tồn tại):
-
-```powershell
-git switch -c feat/huong-ml-dsa
-```
-
-Nếu nhánh đã có:
-
-```powershell
-git switch feat/huong-ml-dsa
-```
-
-**Xem và commit thay đổi:**
-
-```powershell
-git status --short
-git diff --check
-git diff --stat
-
-# Kiem tra khong stage credential/key/JAR truoc khi commit
-git add README.md cenima/src/main cenima/src/test cenima/pom.xml
-git diff --cached --stat
-git status --short
-
-git commit -m "docs: add project setup, JWT and frontend guide"
-git push -u origin feat/huong-ml-dsa
-```
-
-`git add ...` là ví dụ khi bạn muốn đưa cả frontend, ML-DSA, config và README cùng lên nhánh. **Kiểm tra file staged trước khi commit**; thay thông điệp commit cho phù hợp với thay đổi thật. Nếu chỉ muốn push README, dùng `git add README.md` thay vì staging toàn bộ source. Sau đó tạo **Pull Request** trên GitHub để nhóm review trước khi merge vào `main`.
-
-**Khi làm việc với nhóm:**
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-Các cập nhật giao diện Star Cinema và backend quản trị được phát triển trên nhánh `main`.
-=======
-```powershell
-git status
-git fetch origin
-git pull --ff-only origin main
-```
-
-Chỉ chạy `git pull --ff-only origin main` khi đang ở branch `main` sạch và bạn muốn cập nhật main; trên feature branch, cần chọn chiến lược merge/rebase phù hợp thay vì dùng lệnh này mù quáng. **Không dùng `git reset --hard`, `git clean -fd` khi còn code chưa commit.**
-
-## 12. Lỗi thường gặp
-
-| Lỗi/hiện tượng | Nguyên nhân thường gặp | Cách xử lý |
-|---|---|---|
-| `401 UNAUTHENTICATED` khi Verify | Chưa có access token STAFF, token hết hạn hoặc dán nhầm JWT vé | Đăng nhập `staff@cinema.test`, dán **accessToken** vào mục danh tính check-in |
-| `403 FORBIDDEN` | CUSTOMER gọi Verify/Check-in hoặc không phải chủ vé | Đăng nhập đúng quyền STAFF/ADMIN; phát hành bằng chủ vé/ADMIN |
-| `404` ở `/cinema/index.html` | Frontend sai thư mục hoặc JAR cũ | Đặt trong `src/main/resources/static/cinema/`, lưu file rồi build lại |
-| `401` khi mở `/cinema/` | Thiếu `.requestMatchers("/cinema/**").permitAll()` | Kiểm tra `SecurityConfig.java` (profile integrated) |
-| `401` ở `GET /api/movies` | Chưa public GET phim/suất/ghế | Kiểm tra rules GET trong `SecurityConfig.java` |
-| `No tests matching pattern` | Chưa có `MlDsaJwtTest.java` đúng package/tên | Kiểm tra tên class, đường dẫn `src/test/java` |
-| VS Code gạch đỏ nhưng Maven compile được | Java Language Server chưa đồng bộ | Mở đúng thư mục có `pom.xml`, chạy `Java: Clean Java Language Server Workspace` |
-| `Non-parseable POM ... line 2` | Có khoảng trắng/BOM trước `<?xml ...?>` | Đảm bảo `pom.xml` mở đầu ngay bằng XML declaration; lưu UTF-8 |
-| `target` không xóa được khi `clean` | File JAR đang chạy trên Windows | Dừng backend bằng `Ctrl+C` rồi build lại |
-| Port 8080 đang dùng | Backend cũ hoặc app khác chưa dừng | `Get-NetTCPConnection -LocalPort 8080 -State Listen` rồi xem Process ID |
-| Không kết nối SQL Server | Service/TCP/1433/login/cert sai | Kiểm tra SSMS, `sqlcmd`, và nạp lại `.local/env.ps1` |
-| Phim/suất chiếu không hiện | Database trống hoặc suất chiếu đã qua | Kiểm tra seed, trạng thái phim và thời gian suất chiếu |
-| `409 TICKET_USED` / lỗi ghế | Vé đã dùng hoặc ghế đã có người đặt | Đổi ghế/suất hoặc tạo vé demo mới; không reset DB |
-| `422` khi verify | JWT sai, hết hạn, claim không khớp hoặc dữ liệu vé lỗi | Xem `{code,message}` trả về; kiểm tra giờ suất chiếu |
-| `503 ALGORITHM_UNAVAILABLE` | ML-DSA chưa được đăng ký đủ signer/verifier | Kiểm tra cấu hình enable, `MlDsaTicketConfig`, startup logs |
-| QR chứa `etkt:...` thay vì JWT | JWT quá lớn cho QR được cấu hình | Bình thường: server tra JWT theo mã tham chiếu |
-| Không chạy được `.ps1` | PowerShell Execution Policy | `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` |
-
-**Kiểm tra cổng 8080 mà không giết tiến trình tùy tiện:**
-
-```powershell
-Get-NetTCPConnection -LocalPort 8080 -State Listen | Select-Object LocalAddress,LocalPort,OwningProcess
-```
-
-## 13. Bảo mật và giới hạn
-
-- Không commit `cenima/.local/`, `.env`, DB password, private key (`*.pk8`, `*.jwk`, `*.pem`), JWT/access token hoặc log có bí mật.
-- Chỉ chạy initializer trên DB **mới/trống**; sao lưu trước migration. Không chạy test tích hợp SQL trên DB đang sử dụng thực tế.
-- Khóa ký phải ổn định qua restart; xóa hoặc thay khóa khiến JWT cũ có thể không Verify được. Khóa ML-DSA demo lưu local để nghiên cứu, **chưa phải phương án quản lý khóa production**.
-- QR tham chiếu không phải là “không cần chữ ký”: backend vẫn kiểm tra JWT đã ký và quyền/trạng thái vé.
-- Frontend hiện lưu access token trong `sessionStorage` để demo. Trước production cần đánh giá lại XSS, CSP, logout/token lifecycle, HTTPS, quản lý phiên và thiết kế lưu token.
-- Chưa có thanh toán thật; trạng thái `PAID` sau booking chỉ là mô phỏng nghiệp vụ.
-- Chưa nghiệm thu đầy đủ camera, mobile HTTPS, tải lớn, rotation khóa, triển khai nhiều server và benchmark thực nghiệm các thuật toán.
-- `SecurityConfig.java` chỉ quản lý quyền HTTP/authentication; ML-DSA thuộc pipeline E-Ticket, không thay RS256 dùng để đăng nhập.
-
-## 14. Tài liệu liên quan
-
-Các tài liệu đã có trong repository gốc:
-
-- [`docs/API.md`](docs/API.md) — Chi tiết API E-Ticket, request/response, lỗi.
-- [`docs/DESIGN.md`](docs/DESIGN.md) — Thiết kế E-Ticket, JWT, QR.
-- [`docs/INTEGRATION.md`](docs/INTEGRATION.md) — Tích hợp  và các adapter.
-- [`docs/TESTING.md`](docs/TESTING.md) — Bộ test, migration, checklist.
-- [`docs/CAMERA.md`](docs/CAMERA.md) — Quét QR, camera/HTTPS.
-- [`docs/THIRD_PARTY.md`](docs/THIRD_PARTY.md) — Thư viện/giấy phép.
-- [`cenima/.env.example`](cenima/.env.example) — Biến cấu hình mẫu.
-
-**Repository:** <https://github.com/thaone-hub/cenima_backend_thao>
+Quét camera, hiệu năng tải lớn và quy trình Hybrid cần được nghiệm thu riêng.
 
 ---
 
-### Tóm tắt lệnh cần nhớ
+## 12. Lỗi thường gặp
 
-```powershell
-# 1. Mở project
-cd C:\Users\admin\cenima_backend_moi
+| Hiện tượng | Hướng kiểm tra |
+|---|---|
+| `401 UNAUTHENTICATED` | Kiểm tra trạng thái đăng nhập và access token |
+| `403 FORBIDDEN` | Kiểm tra quyền CUSTOMER, STAFF, ADMIN |
+| QR không giải mã được | Kiểm tra ảnh, JavaScript, CSP và thư viện quét |
+| `HTMLImageElement ... broken state` | Kiểm tra cách đọc ảnh và chính sách `img-src` |
+| Phim không có suất chiếu | Kiểm tra dữ liệu Showtimes và thời gian hiện tại |
+| Vé đã sử dụng | Tạo vé mới; không tái sử dụng vé `USED` |
+| `503 ALGORITHM_UNAVAILABLE` | Kiểm tra Signer, Verifier và cấu hình ML-DSA |
+| Maven báo `BUILD FAILURE` | Xem thông báo biên dịch hoặc test bị lỗi |
+| Cổng 8080 đang được sử dụng | Dừng backend cũ hoặc chọn cổng khác |
+| SQL Server không kết nối được | Kiểm tra service, JDBC URL, tài khoản và quyền DB |
 
-# 2. Nạp môi trường SQL (mỗi Terminal mới)
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-. .\cenima\.local\env.ps1
+Sau khi sửa frontend, cần build lại ứng dụng và tải lại trang để trình duyệt sử dụng tài nguyên mới.
 
-# 3. Build (dừng server cũ trước)
-.\cenima\mvnw.cmd -B -f cenima\pom.xml clean package -DskipTests
+---
 
-# 4. Chạy Spring Boot có ML-DSA
-cd cenima
-java -jar target\cenima-0.0.1-SNAPSHOT.jar --spring.profiles.active=integrated --cinema.mldsa.enabled=true
+## 13. Lưu ý bảo mật
 
-# 5. Mở website: http://localhost:8080/cinema/index.html
-# 6. Check-in: http://localhost:8080/demo/check-in.html
-```
+- Không commit mật khẩu, access token, refresh token hoặc JWT vé thật.
+- Không đưa private key lên GitHub.
+- Không commit `cenima/.local/`, các file cấu hình chứa bí mật hoặc thư mục `target/`.
+- Không sử dụng cùng cặp khóa cho mục đích đăng nhập và phát hành vé nếu kiến trúc yêu cầu tách biệt.
+- Không bỏ qua xác minh chữ ký chỉ vì thông tin vé tồn tại trong database.
+- Verify JWT không thay thế kiểm tra trạng thái vé.
+- Mô hình Hybrid phải kiểm tra cả hai chữ ký và chống hạ cấp thuật toán.
+- Hệ thống chưa được đánh giá đầy đủ để triển khai production.
 
-> Đối chiếu: source ZIP của nhóm (26/10/2026), tài liệu `docs/` trong repo và các kết quả chạy/test/giao diện do nhóm cung cấp đến 27/10/2026. Một số thành phần được thêm trên máy local sau bản ZIP; khi đưa lên Git, cần kiểm tra lại cấu hình và tập tin thực tế của branch mới nhất.
->>>>>>> origin/trang_new
-=======
-Nhánh chứa toàn bộ cập nhật giao diện Star Cinema, quản trị và đặt vé/QR: `feat/ngoc-eticket`.
+---
 
-Clone đúng nhánh này trên máy mới:
+## 14. Tài liệu liên quan
 
-```powershell
-git clone --branch feat/ngoc-eticket https://github.com/thaone-hub/cenima_backend_thao.git Cinema
-cd Cinema
-```
->>>>>>> origin/feat/ngoc-eticket
+Các tài liệu kỹ thuật được đặt trong thư mục `docs/`:
+
+- `docs/API.md` — API xác thực và vé điện tử.
+- `docs/DESIGN.md` — Thiết kế JWT, chữ ký số và QR.
+- `docs/INTEGRATION.md` — Tích hợp các thành phần.
+- `docs/TESTING.md` — Kiểm thử hệ thống.
+- `docs/CAMERA.md` — Quét QR bằng camera.
+- `docs/THIRD_PARTY.md` — Thư viện và giấy phép.
+
+**Repository:** https://github.com/thaone-hub/cenima_backend_thao
+
+**Nhánh tích hợp:** `merge_test_2`
+
+---
+
+## 15. Trạng thái và giới hạn của phiên bản tích hợp
+
+README mô tả kiến trúc và các chức năng được kế thừa hoặc hợp nhất trong dự án. Sau mỗi lần merge, cần xác nhận lại các chức năng bằng build, unit test và kiểm thử giao diện.
+
+Các nội dung cần kiểm tra trước khi công bố phiên bản hoàn thiện gồm:
+
+- Khả năng khởi động của profile `integrated`.
+- Đăng ký Signer/Verifier ML-DSA-44.
+- Phát hành và xác minh vé bằng những thuật toán được hỗ trợ.
+- Đọc ảnh QR trên Star Cinema.
+- Check-in và chống sử dụng lại vé.
+- Kiểm thử các lớp bảo mật sau khi merge.
+- Tính tương thích của phần giao diện được bổ sung từ các nhánh khác.
+
+**Dự án phục vụ nghiên cứu và thực nghiệm; các kết quả đánh giá hiệu năng và an toàn Hybrid phải dựa trên dữ liệu kiểm thử thực tế, không suy diễn từ việc build thành công.**

@@ -309,13 +309,7 @@
         button.addEventListener("click", async () => {
           button.disabled = true;
           try {
-            const result = await api(
-              `/api/tickets/${button.dataset.qr}/token`,
-              { method: "POST", body: { algorithm: "RS256" } },
-            );
-            document.getElementById("qr-content").innerHTML =
-              `<img class="qr-image" src="data:image/png;base64,${e(result.qr.pngBase64)}" alt="Mã QR vé điện tử"><p class="qr-note"><strong>${e(result.ticket.movieTitle)}</strong><br>${date(result.ticket.startTime)} · ${e(result.ticket.startTime.slice(11, 16))}<br>${e(result.ticket.roomName)} · Ghế ${e(result.ticket.seatCode)}<br>Mã vé: ${e(result.ticket.ticketCode)}</p><p class="small muted">Vé được ký số JWT ${e(result.algorithm)} để chống sửa thông tin. Xuất trình QR khi check-in; mỗi vé chỉ sử dụng một lần.</p><a class="button outline" href="data:image/png;base64,${e(result.qr.pngBase64)}" download="star-cinema-ticket-${result.ticket.ticketId}.png">Tải mã QR</a>`;
-            document.getElementById("qr-dialog").showModal();
+            await TicketQr.open(button.dataset.qr);
           } catch (error) {
             Space.toast(error.message);
           } finally {

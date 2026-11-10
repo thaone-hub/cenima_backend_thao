@@ -109,12 +109,14 @@
             <version>1.24.0</version>
         </dependency>
 
-        <!-- Huong: Post-Quantum ML-DSA -->
+
+        <!-- Post-Quantum ML-DSA-44 digital signatures (Bouncy Castle) -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
             <version>1.83</version>
         </dependency>
+
 
         <!-- Lombok -->
         <dependency>

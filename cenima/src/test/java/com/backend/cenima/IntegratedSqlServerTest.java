@@ -28,7 +28,7 @@ import java.net.ServerSocket;
 import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT, properties="cinema.mldsa.enabled=true")
 @ActiveProfiles(value="integrated",inheritProfiles=false)
 @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named="TEST_DB_URL",matches=".*databaseName=CINEMA_THAO_ETICKET_TEST(?:;.*)?")
 class IntegratedSqlServerTest extends SqlServerTestSupport {
@@ -164,13 +164,13 @@ class IntegratedSqlServerTest extends SqlServerTestSupport {
     Response verify(String token) { return request("POST","/api/tickets/verify",staffAccess,Map.of("value",token)); }
     Response checkIn(String token) { return request("POST","/api/tickets/check-in",staffAccess,Map.of("value",token)); }
 
-    @ParameterizedTest @ValueSource(strings={"RS256","ES256","EdDSA"})
+    @ParameterizedTest @ValueSource(strings={"RS256","ES256","EdDSA","ML-DSA-44"})
     void actualAlgorithmIssueQrVerifyCheckInAndReplay(String algorithm) throws Exception {
         var response=issue(algorithm,ownerAccess);assertThat(response.status()).isEqualTo(200);
         var data=response.body();String token=data.get("token").asString();
         assertThat(SignedJWT.parse(token).getHeader().getType().toString()).isEqualTo("eticket+jwt");
         assertThat(SignedJWT.parse(token).getHeader().getAlgorithm().getName()).isEqualTo(algorithm);
-        assertThat(data.get("qr").get("mode").asString()).isEqualTo("JWT");
+        assertThat(data.get("qr").get("mode").asString()).isEqualTo(algorithm.equals("ML-DSA-44")?"REFERENCE":"JWT");
         assertThat(Instant.parse(data.get("expiresAt").asString()).getEpochSecond()).isEqualTo(expiration);
         assertThat(response.headers().firstValue("Cache-Control")).contains("no-store");
         assertThat(issue(algorithm,ownerAccess).body().get("expiresAt").asString()).isEqualTo(data.get("expiresAt").asString());
@@ -205,7 +205,7 @@ class IntegratedSqlServerTest extends SqlServerTestSupport {
         assertThat(request("GET","/api/tickets/algorithms",ownerAccess,null).status()).isEqualTo(401);
     }
     @Test void mixedAlgorithmsConcurrentCheckInHaveExactlyOneWinner() throws Exception {
-        String rsa=issue("RS256",ownerAccess).body().get("token").asString();String ec=issue("ES256",ownerAccess).body().get("token").asString();
+        String rsa=issue("RS256",ownerAccess).body().get("token").asString();String ec=issue("ML-DSA-44",ownerAccess).body().get("token").asString();
         var ready=new CountDownLatch(2);var start=new CountDownLatch(1);var executor=Executors.newFixedThreadPool(2);
         try {
             var futures=new ArrayList<Future<Integer>>();
@@ -224,13 +224,13 @@ class IntegratedSqlServerTest extends SqlServerTestSupport {
         assertThat(reference).startsWith("etkt:");assertThat(verify(reference).status()).isEqualTo(200);
         assertThat(checkIn(reference).status()).isEqualTo(200);assertThat(checkIn(rsa).status()).isEqualTo(409);
     }
-    @Test void mlDsaIsUnavailableAndDemoIdentityEndpointsAreDisabled() {
+    @Test void fourAlgorithmsAreAvailableAndDemoIdentityEndpointsAreDisabled() {
         var algorithms=request("GET","/api/tickets/algorithms",ownerAccess,null);assertThat(algorithms.status()).isEqualTo(200);
         int available=0;for (var item:algorithms.body()) if (item.get("available").asBoolean()) available++;
-        assertThat(available).isEqualTo(3);assertThat(issue("ML-DSA-44",ownerAccess).status()).isEqualTo(503);
+        assertThat(available).isEqualTo(4);assertThat(issue("ML-DSA-44",ownerAccess).status()).isEqualTo(200);
         assertThat(request("GET","/api/demo/accounts",ownerAccess,null).status()).isEqualTo(403);
     }
-    @Test void authThreeAlgorithmsAndReferencesSurviveTwoRealProcessRestarts() throws Exception {
+    @Test void authFourAlgorithmsAndReferencesSurviveTwoRealProcessRestarts() throws Exception {
         int parentPort=port;int childPort;
         try (var socket=new ServerSocket(0)) { childPort=socket.getLocalPort(); }
         Process child=null;
@@ -239,15 +239,15 @@ class IntegratedSqlServerTest extends SqlServerTestSupport {
             var owner=login(ownerEmail);String access=owner.get("accessToken").asString(),refresh=owner.get("refreshToken").asString();
             staffAccess=login(staffEmail).get("accessToken").asString();
             var direct=new ArrayList<JsonNode>();
-            for (String algorithm:List.of("RS256","ES256","EdDSA")) {
+            for (String algorithm:List.of("RS256","ES256","EdDSA","ML-DSA-44")) {
                 var response=issue(algorithm,access);assertThat(response.status()).isEqualTo(200);
-                assertThat(response.body().get("qr").get("mode").asString()).isEqualTo("JWT");direct.add(response.body());
+                assertThat(response.body().get("qr").get("mode").asString()).isEqualTo(algorithm.equals("ML-DSA-44")?"REFERENCE":"JWT");direct.add(response.body());
             }
             stopProcess(child);child=startProcess(childPort,5,2);
             for (var token:direct) assertThat(verify(token.get("token").asString()).status()).isEqualTo(200);
             assertThat(request("POST","/api/auth/refresh",null,Map.of("refreshToken",refresh)).status()).isEqualTo(200);
             var ref=new ArrayList<JsonNode>();
-            for (String algorithm:List.of("RS256","ES256","EdDSA")) {
+            for (String algorithm:List.of("RS256","ES256","EdDSA","ML-DSA-44")) {
                 var response=issue(algorithm,access);assertThat(response.status()).isEqualTo(200);
                 assertThat(response.body().get("qr").get("mode").asString()).isEqualTo("REFERENCE");
                 assertThat(response.body().get("expiresAt").asString()).isEqualTo(direct.getFirst().get("expiresAt").asString());ref.add(response.body());
@@ -262,7 +262,7 @@ class IntegratedSqlServerTest extends SqlServerTestSupport {
         String java=Path.of(System.getProperty("java.home"),"bin",System.getProperty("os.name").startsWith("Windows")?"java.exe":"java").toString();
         String classpath=System.getProperty("surefire.test.class.path",System.getProperty("java.class.path")).replace('\\','/');
         var args=restartDirectory.resolve("java-"+sequence+".args");
-        Files.writeString(args,"-cp\n\""+classpath+"\"\ncom.backend.cenima.CenimaApplication\n--spring.profiles.active=integrated\n--server.address=127.0.0.1\n--server.port="+childPort+"\n--ticket.qr-max-version="+qrVersion+"\n--traditional.key-directory=\""+restartDirectory.resolve("keys").toString().replace('\\','/')+"\"\n");
+        Files.writeString(args,"-cp\n\""+classpath+"\"\ncom.backend.cenima.CenimaApplication\n--spring.profiles.active=integrated\n--server.address=127.0.0.1\n--server.port="+childPort+"\n--ticket.qr-max-version="+qrVersion+"\n--cinema.mldsa.enabled=true\n--cinema.mldsa.key-dir=\""+restartDirectory.resolve("mldsa").toString().replace('\\','/')+"\"\n--traditional.key-directory=\""+restartDirectory.resolve("keys").toString().replace('\\','/')+"\"\n");
         var builder=new ProcessBuilder(java,"@"+args).redirectOutput(restartDirectory.resolve("server-"+sequence+".log").toFile()).redirectErrorStream(true);
         builder.environment().put("DB_URL",System.getenv("TEST_DB_URL"));builder.environment().put("DB_USERNAME",System.getenv("TEST_DB_USERNAME"));
         builder.environment().put("DB_PASSWORD",System.getenv("TEST_DB_PASSWORD"));builder.environment().put("DEBUG","false");
