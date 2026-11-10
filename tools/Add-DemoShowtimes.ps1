@@ -1,6 +1,6 @@
-param(
+﻿param(
     [string]$Server = 'localhost',
-    [ValidateRange(1, 7)][int]$Days = 3
+    [ValidateRange(1, 60)][int]$Days = 30
 )
 $ErrorActionPreference = 'Stop'
 # Additive demo data only. Never reset dates, tickets, movies, rooms, or seats.
@@ -42,3 +42,4 @@ ORDER BY s.StartTime;
 "@
 $sql | & sqlcmd -b -S $Server -E -C -d CINEMA_THAO_ETICKET_DEMO -f 65001
 if ($LASTEXITCODE -ne 0) { throw 'Adding local demo showtimes failed.' }
+
