@@ -458,27 +458,29 @@ Khi xác minh, hệ thống kiểm tra chữ ký bằng khóa công khai tương
 
 ### 9.3. Cấu hình ML-DSA-44
 
-Mô-đun ML-DSA chỉ được kích hoạt khi cấu hình:
+Trong profile `integrated`, thuật toán ML-DSA-44 được **bật mặc định** để phục vụ việc phát hành và xác minh vé điện tử.
 
-```properties
-cinema.mldsa.enabled=true
-```
+Spring Boot tự động khởi tạo các thành phần quản lý khóa, ký số và xác minh chữ ký ML-DSA-44 khi khởi động ứng dụng.
 
-Có thể bật từ PowerShell trước khi khởi động:
+Có thể chủ động tắt ML-DSA bằng cách thiết lập:
 
 ```powershell
-$env:CINEMA_MLDSA_ENABLED = "true"
+$env:CINEMA_MLDSA_ENABLED = "false"
+```
 
+Sau đó khởi động ứng dụng:
+
+```powershell
 .\tools\Start-Portal.ps1 -Build
 ```
 
-Theo cấu hình hợp nhất từ `merge_test_1`, thư mục khóa ML-DSA mặc định là:
+Theo cấu hình hiện tại, thư mục lưu khóa ML-DSA mặc định là:
 
 `${user.home}/.cinema/mldsa44`
 
-Có thể thay đổi bằng thuộc tính `cinema.mldsa.key-dir`.
+Có thể thay đổi đường dẫn bằng thuộc tính `cinema.mldsa.key-dir`.
 
-Không xóa hoặc thay thế khóa khi còn vé hợp lệ được phát hành bằng cặp khóa đó.
+**Lưu ý:** Bật ML-DSA mặc định không có nghĩa tất cả JWT đều sử dụng ML-DSA. JWT đăng nhập vẫn sử dụng RS256; ML-DSA chỉ được đăng ký để phục vụ chức năng chữ ký số vé điện tử.
 
 ### 9.4. Kiểm tra cặp khóa ML-DSA
 

@@ -26,7 +26,8 @@ import org.springframework.context.annotation.Profile;
 @Profile("integrated")
 @ConditionalOnProperty(
     name = "cinema.mldsa.enabled",
-    havingValue = "true"
+    havingValue = "true",
+    matchIfMissing = true
 )
 public class MlDsaTicketConfig {
 
